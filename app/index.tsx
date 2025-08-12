@@ -13,6 +13,11 @@ export default function Index() {
       <Text>Edit app/index.tsx to edit this screen.</Text>
       <View style={{ height: 16 }} />
       <Button
+        title="Bank accounts"
+        onPress={() => router.push("/bank-accounts")}
+      />
+      <View style={{ height: 16 }} />
+      <Button
         title="Go to Settings"
         onPress={() => router.push("/settings")}
       />
