@@ -18,8 +18,18 @@ export default function Index() {
       />
       <View style={{ height: 16 }} />
       <Button
+        title="+ Upload Statement"
+        onPress={() => router.push("/upload-statement")}
+      />
+      <View style={{ height: 16 }} />
+      <Button
         title="Go to Settings"
         onPress={() => router.push("/settings")}
+      />
+      <View style={{ height: 16 }} />
+      <Button
+        title="Uploads"
+        onPress={() => router.push("/uploads")}
       />
     </View>
   );

@@ -63,6 +63,11 @@ export default function BankAccountsList() {
           title="+ Add bank account"
           onPress={() => router.push('/bank-accounts/new')}
         />
+        <View style={{ height: 16 }} />
+        <Button
+          title="+ Upload Statement"
+          onPress={() => router.push('/upload-statement')}
+        />
       </View>
     </View>
   );
