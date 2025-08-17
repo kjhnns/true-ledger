@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import * as SecureStore from 'expo-secure-store';
 import { getDb } from './db';
+import { generateClassificationKey } from './classification';
 
 export interface BankAccount {
   id: string;
   label: string;
-  classificationKey?: string;
+  classificationKey: string;
   prompt: string;
   createdAt: number;
   updatedAt: number;
@@ -14,28 +14,15 @@ export interface BankAccount {
 export const bankAccountSchema = z.object({
   label: z.string().min(1, 'Label is required'),
   prompt: z.string().min(1, 'Prompt is required'),
-  classificationKey: z.string().min(1).optional(),
 });
 
 export type BankAccountInput = z.infer<typeof bankAccountSchema>;
 
-function secureKey(id: string) {
-  return `bank_account:${id}:classificationKey`;
-}
-
 async function mapRow(row: any): Promise<BankAccount> {
-  let classificationKey: string | null = row.classification_key;
-  if (!classificationKey) {
-    try {
-      classificationKey = await SecureStore.getItemAsync(secureKey(row.id));
-    } catch {
-      classificationKey = null;
-    }
-  }
   return {
     id: row.id,
     label: row.label,
-    classificationKey: classificationKey ?? undefined,
+    classificationKey: row.classification_key,
     prompt: row.prompt,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -69,21 +56,18 @@ export async function createBankAccount(
 ): Promise<BankAccount> {
   const parsed = bankAccountSchema.parse(input);
   const db = await getDb();
+  const existingRows = await db.getAllAsync<{ classification_key: string }>(
+    'SELECT classification_key FROM bank_accounts'
+  );
+  const existing = new Set(existingRows.map((r) => r.classification_key));
   const id = crypto.randomUUID();
   const now = Date.now();
-  let classificationColumn: string | null = null;
-  if (parsed.classificationKey) {
-    try {
-      await SecureStore.setItemAsync(secureKey(id), parsed.classificationKey);
-    } catch {
-      classificationColumn = parsed.classificationKey;
-    }
-  }
+  const classificationKey = generateClassificationKey(parsed.label, existing);
   await db.runAsync(
     'INSERT INTO bank_accounts (id,label,classification_key,prompt,created_at,updated_at) VALUES (?,?,?,?,?,?)',
     id,
     parsed.label,
-    classificationColumn,
+    classificationKey,
     parsed.prompt,
     now,
     now
@@ -91,7 +75,7 @@ export async function createBankAccount(
   return {
     id,
     label: parsed.label,
-    classificationKey: parsed.classificationKey,
+    classificationKey,
     prompt: parsed.prompt,
     createdAt: now,
     updatedAt: now,
@@ -106,22 +90,17 @@ export async function updateBankAccount(
   if (!existing) throw new Error('Bank account not found');
   const parsed = bankAccountSchema.parse(input);
   const db = await getDb();
+  const rows = await db.getAllAsync<{ id: string; classification_key: string }>(
+    'SELECT id, classification_key FROM bank_accounts WHERE id<>?',
+    id
+  );
+  const existingKeys = new Set(rows.map((r) => r.classification_key));
+  const classificationKey = generateClassificationKey(parsed.label, existingKeys);
   const now = Date.now();
-  let classificationColumn: string | null = null;
-  let classificationKey = existing.classificationKey;
-  if (parsed.classificationKey) {
-    try {
-      await SecureStore.setItemAsync(secureKey(id), parsed.classificationKey);
-      classificationKey = parsed.classificationKey;
-    } catch {
-      classificationColumn = parsed.classificationKey;
-      classificationKey = parsed.classificationKey;
-    }
-  }
   await db.runAsync(
     'UPDATE bank_accounts SET label=?, classification_key=?, prompt=?, updated_at=? WHERE id=?',
     parsed.label,
-    classificationColumn,
+    classificationKey,
     parsed.prompt,
     now,
     id
@@ -139,9 +118,4 @@ export async function updateBankAccount(
 export async function deleteBankAccount(id: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM bank_accounts WHERE id=?', id);
-  try {
-    await SecureStore.deleteItemAsync(secureKey(id));
-  } catch {
-    // ignore
-  }
 }

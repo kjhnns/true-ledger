@@ -1,19 +1,3 @@
-jest.mock('expo-secure-store', () => {
-  const store: Record<string, string> = {};
-  return {
-    __store: store,
-    setItemAsync: jest.fn((k: string, v: string) => {
-      store[k] = v;
-      return Promise.resolve();
-    }),
-    getItemAsync: jest.fn((k: string) => Promise.resolve(store[k] ?? null)),
-    deleteItemAsync: jest.fn((k: string) => {
-      delete store[k];
-      return Promise.resolve();
-    }),
-  };
-});
-
 jest.mock('expo-sqlite', () => {
   const rows: any[] = [];
   return {
@@ -54,8 +38,6 @@ import {
   listBankAccounts,
 } from '../lib/bankAccounts';
 import { initDb } from '../lib/db';
-
-const secureStore = require('expo-secure-store');
 const sqlite = require('expo-sqlite');
 
 beforeAll(async () => {
@@ -64,20 +46,16 @@ beforeAll(async () => {
 
 beforeEach(() => {
   sqlite.__rows.length = 0;
-  for (const key of Object.keys(secureStore.__store)) {
-    delete secureStore.__store[key];
-  }
 });
 
 test('create and retrieve bank account', async () => {
   const created = await createBankAccount({
     label: 'Checking',
     prompt: 'hi',
-    classificationKey: 'secret',
   });
   const fetched = await getBankAccount(created.id);
   expect(fetched?.label).toBe('Checking');
-  expect(fetched?.classificationKey).toBe('secret');
+  expect(fetched?.classificationKey).toBe('checking');
 });
 
 test('validation fails for missing label', async () => {
@@ -86,28 +64,34 @@ test('validation fails for missing label', async () => {
   ).rejects.toThrow();
 });
 
-test('update modifies label and prompt', async () => {
+test('update modifies label, prompt, and key', async () => {
   const created = await createBankAccount({ label: 'Old', prompt: 'p' });
-  await updateBankAccount(created.id, { label: 'New', prompt: 'p2' });
+  await updateBankAccount(created.id, { label: 'New Name', prompt: 'p2' });
   const fetched = await getBankAccount(created.id);
-  expect(fetched?.label).toBe('New');
+  expect(fetched?.label).toBe('New Name');
   expect(fetched?.prompt).toBe('p2');
+  expect(fetched?.classificationKey).toBe('new-name');
 });
 
-test('delete removes account and key', async () => {
+test('delete removes account', async () => {
   const created = await createBankAccount({
     label: 'Del',
     prompt: 'p',
-    classificationKey: 'secret',
   });
   await deleteBankAccount(created.id);
   const fetched = await getBankAccount(created.id);
   expect(fetched).toBeNull();
-  expect(secureStore.__store).toEqual({});
 });
 
 test('list returns created accounts', async () => {
   await createBankAccount({ label: 'List', prompt: 'p' });
   const list = await listBankAccounts();
   expect(list.length).toBe(1);
+});
+
+test('auto-generated keys are unique', async () => {
+  const a = await createBankAccount({ label: 'Dup', prompt: 'p' });
+  const b = await createBankAccount({ label: 'Dup', prompt: 'p' });
+  expect(a.classificationKey).toBe('dup');
+  expect(b.classificationKey).toBe('dup-2');
 });

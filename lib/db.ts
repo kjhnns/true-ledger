@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { generateClassificationKey } from './classification';
 
 const dbPromise = SQLite.openDatabaseAsync('app.db');
 
@@ -19,4 +20,14 @@ export async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_bank_accounts_label ON bank_accounts(label);`
   );
+  const rows = await db.getAllAsync<{ id: string; label: string; classification_key: string | null }>(
+    'SELECT id,label,classification_key FROM bank_accounts'
+  );
+  const keys = new Set<string>();
+  for (const row of rows) {
+    const key = generateClassificationKey(row.label, keys);
+    if (row.classification_key !== key) {
+      await db.runAsync('UPDATE bank_accounts SET classification_key=? WHERE id=?', key, row.id);
+    }
+  }
 }

@@ -5,13 +5,18 @@ import { getBankAccount, updateBankAccount } from '../../lib/bankAccounts';
 
 export default function EditBankAccount() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [initial, setInitial] = useState<{ label: string; prompt: string } | null>(null);
+  const [initial, setInitial] =
+    useState<{ label: string; prompt: string; classificationKey: string } | null>(null);
 
   useEffect(() => {
     (async () => {
       const acct = await getBankAccount(id);
       if (acct) {
-        setInitial({ label: acct.label, prompt: acct.prompt });
+        setInitial({
+          label: acct.label,
+          prompt: acct.prompt,
+          classificationKey: acct.classificationKey,
+        });
       }
     })();
   }, [id]);
