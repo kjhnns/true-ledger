@@ -4,10 +4,11 @@ export function generateClassificationKey(label: string, existing: Set<string> =
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  let key = base || 'account';
+  const keyBase = base || 'account';
+  let key = `account_${keyBase}`;
   let suffix = 2;
   while (existing.has(key)) {
-    key = `${base}-${suffix++}`;
+    key = `account_${keyBase}-${suffix++}`;
   }
   existing.add(key);
   return key;
