@@ -18,6 +18,20 @@ export const bankAccountSchema = z.object({
 
 export type BankAccountInput = z.infer<typeof bankAccountSchema>;
 
+function generateId(): string {
+  const cryptoObj: any = globalThis.crypto;
+  if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
+  if (!cryptoObj?.getRandomValues) {
+    throw new Error('secure random number generation is not supported');
+  }
+  const bytes = new Uint8Array(16);
+  cryptoObj.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 async function mapRow(row: any): Promise<BankAccount> {
   return {
     id: row.id,
@@ -60,7 +74,7 @@ export async function createBankAccount(
     'SELECT classification_key FROM bank_accounts'
   );
   const existing = new Set(existingRows.map((r) => r.classification_key));
-  const id = crypto.randomUUID();
+  const id = generateId();
   const now = Date.now();
   const classificationKey = generateClassificationKey(parsed.label, existing);
   await db.runAsync(

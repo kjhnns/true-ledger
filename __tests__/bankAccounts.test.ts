@@ -55,7 +55,8 @@ test('create and retrieve bank account', async () => {
   });
   const fetched = await getBankAccount(created.id);
   expect(fetched?.label).toBe('Checking');
-  expect(fetched?.classificationKey).toBe('checking');
+  expect(fetched?.classificationKey).toBe('account_checking');
+  expect(fetched?.classificationKey.startsWith('account_')).toBe(true);
 });
 
 test('validation fails for missing label', async () => {
@@ -70,7 +71,8 @@ test('update modifies label, prompt, and key', async () => {
   const fetched = await getBankAccount(created.id);
   expect(fetched?.label).toBe('New Name');
   expect(fetched?.prompt).toBe('p2');
-  expect(fetched?.classificationKey).toBe('new-name');
+  expect(fetched?.classificationKey).toBe('account_new-name');
+  expect(fetched?.classificationKey.startsWith('account_')).toBe(true);
 });
 
 test('delete removes account', async () => {
@@ -92,6 +94,15 @@ test('list returns created accounts', async () => {
 test('auto-generated keys are unique', async () => {
   const a = await createBankAccount({ label: 'Dup', prompt: 'p' });
   const b = await createBankAccount({ label: 'Dup', prompt: 'p' });
-  expect(a.classificationKey).toBe('dup');
-  expect(b.classificationKey).toBe('dup-2');
+  expect(a.classificationKey).toBe('account_dup');
+  expect(b.classificationKey).toBe('account_dup-2');
+});
+
+test('creation works without randomUUID', async () => {
+  const cryptoObj: any = global.crypto;
+  const original = cryptoObj.randomUUID;
+  cryptoObj.randomUUID = undefined;
+  const created = await createBankAccount({ label: 'NoUUID', prompt: 'p' });
+  expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
+  cryptoObj.randomUUID = original;
 });
