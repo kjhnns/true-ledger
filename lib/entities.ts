@@ -14,6 +14,7 @@ export interface Entity {
 }
 
 export type BankAccount = Entity;
+export type ExpenseCategory = Entity;
 
 export const entitySchema = z.object({
   label: z.string().min(1, 'Label is required'),
@@ -26,6 +27,13 @@ export type EntityInput = z.infer<typeof entitySchema>;
 
 export const bankAccountSchema = entitySchema.pick({ label: true, prompt: true });
 export type BankAccountInput = z.infer<typeof bankAccountSchema>;
+
+export const expenseCategorySchema = entitySchema.pick({
+  label: true,
+  prompt: true,
+  parentId: true,
+});
+export type ExpenseCategoryInput = z.infer<typeof expenseCategorySchema>;
 
 function mapRow(row: any): Entity {
   return {
@@ -130,5 +138,26 @@ export async function updateBankAccount(id: string, input: BankAccountInput) {
 }
 
 export async function deleteBankAccount(id: string) {
+  return deleteEntity(id);
+}
+
+export async function listExpenseCategories() {
+  return listEntities('expense');
+}
+
+export async function createExpenseCategory(input: ExpenseCategoryInput) {
+  const parsed = expenseCategorySchema.parse(input);
+  return createEntity({ ...parsed, category: 'expense' });
+}
+
+export async function updateExpenseCategory(
+  id: string,
+  input: ExpenseCategoryInput
+) {
+  const parsed = expenseCategorySchema.parse(input);
+  return updateEntity(id, { ...parsed, category: 'expense' });
+}
+
+export async function deleteExpenseCategory(id: string) {
   return deleteEntity(id);
 }
