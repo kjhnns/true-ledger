@@ -18,6 +18,11 @@ export default function Index() {
       />
       <View style={{ height: 16 }} />
       <Button
+        title="Expense Categories"
+        onPress={() => router.push("/expense-categories")}
+      />
+      <View style={{ height: 16 }} />
+      <Button
         title="Go to Settings"
         onPress={() => router.push("/settings")}
       />

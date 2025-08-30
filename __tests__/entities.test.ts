@@ -62,6 +62,10 @@ import {
   listBankAccounts,
   listEntities,
   updateBankAccount,
+  createExpenseCategory,
+  updateExpenseCategory,
+  deleteExpenseCategory,
+  listExpenseCategories,
 } from '../lib/entities';
 import { initDb } from '../lib/db';
 const sqlite = require('expo-sqlite');
@@ -87,4 +91,33 @@ test('create, update, delete bank account', async () => {
   await deleteBankAccount(created.id);
   const list = await listBankAccounts();
   expect(list.length).toBe(0);
+});
+
+test('create, update, delete expense category with parent', async () => {
+  const parent = await createExpenseCategory({
+    label: 'Parent',
+    prompt: 'p',
+    parentId: null,
+  });
+  const child = await createExpenseCategory({
+    label: 'Child',
+    prompt: 'p',
+    parentId: parent.id,
+  });
+  let list = await listExpenseCategories();
+  expect(list.find((c) => c.id === child.id)?.parentId).toBe(parent.id);
+  await updateExpenseCategory(child.id, {
+    label: 'Child2',
+    prompt: 'p2',
+    parentId: null,
+  });
+  list = await listExpenseCategories();
+  const updatedChild = list.find((c) => c.id === child.id);
+  expect(updatedChild?.label).toBe('Child2');
+  expect(updatedChild?.parentId).toBeNull();
+  await deleteExpenseCategory(child.id);
+  await deleteExpenseCategory(parent.id);
+  list = await listExpenseCategories();
+  expect(list.find((c) => c.id === parent.id)).toBeFalsy();
+  expect(list.find((c) => c.id === child.id)).toBeFalsy();
 });
