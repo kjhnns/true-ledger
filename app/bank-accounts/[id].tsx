@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import BankAccountForm from './form';
+import { useEffect, useState } from 'react';
 import { getBankAccount, updateBankAccount } from '../../lib/bankAccounts';
+import BankAccountForm from './form';
 
 export default function EditBankAccount() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [initial, setInitial] =
-    useState<{ label: string; prompt: string; classificationKey: string } | null>(null);
+    useState<{ label: string; prompt: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -15,7 +15,6 @@ export default function EditBankAccount() {
         setInitial({
           label: acct.label,
           prompt: acct.prompt,
-          classificationKey: acct.classificationKey,
         });
       }
     })();

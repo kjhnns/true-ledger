@@ -1,33 +1,17 @@
-import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button } from 'react-native';
-import { BankAccountInput, bankAccountSchema, listBankAccounts } from '../../lib/bankAccounts';
-import { generateClassificationKey } from '../../lib/classification';
+import { useState } from 'react';
+import { Button, Text, TextInput, View } from 'react-native';
+import { BankAccountInput, bankAccountSchema } from '../../lib/bankAccounts';
 
-type Props = {
-  initial?: { label: string; prompt: string; classificationKey: string };
+export type Props = {
+  initial?: { label: string; prompt: string };
   onSubmit: (input: BankAccountInput) => Promise<void>;
   submitLabel: string;
 };
 
 export default function BankAccountForm({ initial, onSubmit, submitLabel }: Props) {
-  const [label, setLabel] = useState(initial?.label ?? '');
-  const [classificationKey, setClassificationKey] = useState('');
-  const [existingKeys, setExistingKeys] = useState<Set<string>>(new Set());
-  const [prompt, setPrompt] = useState(initial?.prompt ?? '');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    (async () => {
-      const accounts = await listBankAccounts();
-      const keys = new Set(accounts.map((a) => a.classificationKey));
-      if (initial?.classificationKey) keys.delete(initial.classificationKey);
-      setExistingKeys(keys);
-    })();
-  }, [initial]);
-
-  useEffect(() => {
-    setClassificationKey(generateClassificationKey(label, new Set(existingKeys)));
-  }, [label, existingKeys]);
+  const [label, setLabel] = useState<string>(initial?.label ?? '');
+  const [prompt, setPrompt] = useState<string>(initial?.prompt ?? '');
+  const [error, setError] = useState<string>('');
 
   const handleSave = async () => {
     const input: BankAccountInput = {
@@ -51,15 +35,6 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
         onChangeText={setLabel}
         style={{ borderWidth: 1, padding: 8, marginBottom: 12 }}
       />
-      <Text style={{ marginBottom: 4 }}>Classification key</Text>
-      <TextInput
-        value={classificationKey}
-        editable={false}
-        style={{ borderWidth: 1, padding: 8, marginBottom: 4, color: '#666' }}
-      />
-      <Text style={{ fontSize: 12, marginBottom: 12, color: '#666' }}>
-        Used to classify transactions.
-      </Text>
       <Text style={{ marginBottom: 4 }}>Prompt</Text>
       <TextInput
         value={prompt}
