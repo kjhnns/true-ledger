@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import BankAccountForm from './form';
-import { createBankAccount } from '../../lib/bankAccounts';
+import { createBankAccount } from '../../lib/entities';
 
 export default function NewBankAccount() {
   return (

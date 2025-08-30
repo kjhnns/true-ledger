@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { getBankAccount, updateBankAccount } from '../../lib/bankAccounts';
+import { getBankAccount, updateBankAccount } from '../../lib/entities';
 import BankAccountForm from './form';
 
 export default function EditBankAccount() {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Text, TextInput, View } from 'react-native';
-import { BankAccountInput, bankAccountSchema } from '../../lib/bankAccounts';
+import { BankAccountInput, bankAccountSchema } from '../../lib/entities';
 
 export type Props = {
   initial?: { label: string; prompt: string };

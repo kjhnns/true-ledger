@@ -6,7 +6,7 @@ import {
   BankAccount,
   listBankAccounts,
   deleteBankAccount,
-} from '../../lib/bankAccounts';
+} from '../../lib/entities';
 
 export default function BankAccountsList() {
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
