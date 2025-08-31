@@ -1,59 +1,4 @@
-jest.mock('expo-sqlite', () => {
-  const rows: any[] = [];
-  let id = 1;
-  return {
-    __rows: rows,
-    __reset: () => {
-      rows.length = 0;
-      id = 1;
-    },
-    openDatabaseAsync: async () => ({
-      execAsync: async () => {},
-      getAllAsync: async (_sql: string, category: string) =>
-        rows.filter((r) => r.category === category),
-      getFirstAsync: async (sql: string, param?: any) => {
-        if (sql.startsWith('SELECT COUNT(*)')) {
-          return { count: rows.filter((r) => r.category === param).length };
-        }
-        if (sql.includes('rowid = last_insert_rowid()')) {
-          return rows[rows.length - 1] ?? null;
-        }
-        if (sql.includes('WHERE id=?')) {
-          return rows.find((r) => r.id === param) ?? null;
-        }
-        return null;
-      },
-      runAsync: async (sql: string, ...params: any[]) => {
-        if (sql.startsWith('INSERT INTO entities')) {
-          const [label, category, prompt, parent_id, created_at, updated_at] = params;
-          rows.push({
-            id: String(id++),
-            label,
-            category,
-            prompt,
-            parent_id,
-            created_at,
-            updated_at,
-          });
-        } else if (sql.startsWith('UPDATE entities')) {
-          const [label, category, prompt, parent_id, updated_at, idParam] = params;
-          const row = rows.find((r) => r.id === idParam);
-          if (row) {
-            row.label = label;
-            row.category = category;
-            row.prompt = prompt;
-            row.parent_id = parent_id;
-            row.updated_at = updated_at;
-          }
-        } else if (sql.startsWith('DELETE FROM entities')) {
-          const [idParam] = params;
-          const idx = rows.findIndex((r) => r.id === idParam);
-          if (idx !== -1) rows.splice(idx, 1);
-        }
-      },
-    }),
-  };
-});
+jest.mock('expo-sqlite', () => require('../test-utils/sqliteMock').sqliteMock);
 
 import {
   createBankAccount,
@@ -82,15 +27,31 @@ test('seeds default expense categories', async () => {
 });
 
 test('create, update, delete bank account', async () => {
-  const created = await createBankAccount({ label: 'Checking', prompt: 'p' });
+  const created = await createBankAccount({
+    label: 'Checking',
+    prompt: 'p',
+    currency: 'USD',
+  });
   const fetched = await getBankAccount(created.id);
   expect(fetched?.category).toBe('bank');
-  await updateBankAccount(created.id, { label: 'New', prompt: 'p2' });
+  expect(fetched?.currency).toBe('USD');
+  await updateBankAccount(created.id, {
+    label: 'New',
+    prompt: 'p2',
+    currency: 'EUR',
+  });
   const updated = await getBankAccount(created.id);
   expect(updated?.label).toBe('New');
+  expect(updated?.currency).toBe('EUR');
   await deleteBankAccount(created.id);
   const list = await listBankAccounts();
   expect(list.length).toBe(0);
+});
+
+test('reject invalid currency', async () => {
+  await expect(
+    createBankAccount({ label: 'A', prompt: 'p', currency: 'ZZZ' as any })
+  ).rejects.toThrow();
 });
 
 test('create, update, delete expense category with parent', async () => {

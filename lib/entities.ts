@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getDb } from './db';
+import { Currency, SUPPORTED_CURRENCIES } from './currencies';
 
 export type EntityCategory = 'bank' | 'expense' | 'income' | 'savings';
 
@@ -9,6 +10,7 @@ export interface Entity {
   category: EntityCategory;
   prompt: string;
   parentId: string | null;
+  currency: Currency;
   createdAt: number;
   updatedAt: number;
 }
@@ -21,11 +23,16 @@ export const entitySchema = z.object({
   category: z.enum(['bank', 'expense', 'income', 'savings']),
   prompt: z.string().min(1, 'Prompt is required'),
   parentId: z.string().nullable().optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES),
 });
 
 export type EntityInput = z.infer<typeof entitySchema>;
 
-export const bankAccountSchema = entitySchema.pick({ label: true, prompt: true });
+export const bankAccountSchema = entitySchema.pick({
+  label: true,
+  prompt: true,
+  currency: true,
+});
 export type BankAccountInput = z.infer<typeof bankAccountSchema>;
 
 export const expenseCategorySchema = entitySchema.pick({
@@ -42,6 +49,7 @@ function mapRow(row: any): Entity {
     category: row.category as EntityCategory,
     prompt: row.prompt,
     parentId: row.parent_id ? String(row.parent_id) : null,
+    currency: row.currency as Currency,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -71,11 +79,12 @@ export async function createEntity(input: EntityInput): Promise<Entity> {
   const db = await getDb();
   const now = Date.now();
   await db.runAsync(
-    'INSERT INTO entities (label, category, prompt, parent_id, created_at, updated_at) VALUES (?,?,?,?,?,?)',
+    'INSERT INTO entities (label, category, prompt, parent_id, currency, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
     parsed.label,
     parsed.category,
     parsed.prompt,
     parsed.parentId ?? null,
+    parsed.currency,
     now,
     now
   );
@@ -95,11 +104,12 @@ export async function updateEntity(
   const db = await getDb();
   const now = Date.now();
   await db.runAsync(
-    'UPDATE entities SET label=?, category=?, prompt=?, parent_id=?, updated_at=? WHERE id=?',
+    'UPDATE entities SET label=?, category=?, prompt=?, parent_id=?, currency=?, updated_at=? WHERE id=?',
     parsed.label,
     parsed.category,
     parsed.prompt,
     parsed.parentId ?? null,
+    parsed.currency,
     now,
     id
   );
@@ -109,6 +119,7 @@ export async function updateEntity(
     category: parsed.category,
     prompt: parsed.prompt,
     parentId: parsed.parentId ?? null,
+    currency: parsed.currency,
     createdAt: existing.createdAt,
     updatedAt: now,
   };
@@ -147,7 +158,11 @@ export async function listExpenseCategories() {
 
 export async function createExpenseCategory(input: ExpenseCategoryInput) {
   const parsed = expenseCategorySchema.parse(input);
-  return createEntity({ ...parsed, category: 'expense' });
+  return createEntity({
+    ...parsed,
+    category: 'expense',
+    currency: 'USD',
+  });
 }
 
 export async function updateExpenseCategory(
@@ -155,7 +170,7 @@ export async function updateExpenseCategory(
   input: ExpenseCategoryInput
 ) {
   const parsed = expenseCategorySchema.parse(input);
-  return updateEntity(id, { ...parsed, category: 'expense' });
+  return updateEntity(id, { ...parsed, category: 'expense', currency: 'USD' });
 }
 
 export async function deleteExpenseCategory(id: string) {

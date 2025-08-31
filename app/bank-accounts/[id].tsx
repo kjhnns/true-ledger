@@ -6,7 +6,7 @@ import BankAccountForm from './form';
 export default function EditBankAccount() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [initial, setInitial] =
-    useState<{ label: string; prompt: string } | null>(null);
+    useState<{ label: string; prompt: string; currency: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -15,6 +15,7 @@ export default function EditBankAccount() {
         setInitial({
           label: acct.label,
           prompt: acct.prompt,
+          currency: acct.currency,
         });
       }
     })();
