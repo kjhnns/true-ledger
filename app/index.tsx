@@ -1,8 +1,8 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Modal, Pressable, View } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Button, DataTable, Text } from 'react-native-paper';
 import { Entity } from '../lib/entities';
 import {
   createDummyStatementWithTransactions,
@@ -80,26 +80,35 @@ export default function Index() {
         Expense categories
       </Button>
       <Button onPress={openUploadModal}>Upload Statement</Button>
-      <FlatList
-        data={statements}
-        keyExtractor={(s) => s.id}
-        ListEmptyComponent={<Text>No statements</Text>}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => router.push(`/statements/${item.id}`)}
-            style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1 }}
-          >
-            <Text style={{ flex: 1 }}>{item.bankLabel}</Text>
-            <Text style={{ flex: 1 }}>
-              {new Date(item.uploadDate).toLocaleDateString()}
-            </Text>
-            <Text style={{ width: 40, textAlign: 'center' }}>
-              {item.transactionCount}
-            </Text>
-            <StatusRow item={item} />
-          </Pressable>
-        )}
-      />
+      {statements.length === 0 ? (
+        <Text>No statements</Text>
+      ) : (
+        <ScrollView>
+          <DataTable>
+            <DataTable.Header>
+              <DataTable.Title>Bank</DataTable.Title>
+              <DataTable.Title>Upload Date</DataTable.Title>
+              <DataTable.Title numeric>Txns</DataTable.Title>
+              <DataTable.Title>Progress</DataTable.Title>
+            </DataTable.Header>
+            {statements.map((item) => (
+              <DataTable.Row
+                key={item.id}
+                onPress={() => router.push(`/statements/${item.id}`)}
+              >
+                <DataTable.Cell>{item.bankLabel}</DataTable.Cell>
+                <DataTable.Cell>
+                  {new Date(item.uploadDate).toLocaleDateString()}
+                </DataTable.Cell>
+                <DataTable.Cell numeric>{item.transactionCount}</DataTable.Cell>
+                <DataTable.Cell style={{ width: 80 }}>
+                  <StatusRow item={item} />
+                </DataTable.Cell>
+              </DataTable.Row>
+            ))}
+          </DataTable>
+        </ScrollView>
+      )}
       <Modal visible={modalVisible} animationType="slide">
         <View style={{ flex: 1, padding: 16, paddingTop: 128 }}>
           <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
