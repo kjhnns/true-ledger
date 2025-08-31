@@ -1,0 +1,18 @@
+name: Staging OTA
+on:
+  push:
+    branches: [ "master" ]   # or "master"
+jobs:
+  ota:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci
+      - run: npx expo-doctor --fix --ci || true
+      - name: EAS Update to Staging
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_ENV: staging
+        run: npx eas update --channel staging --non-interactive --message "CI ${GITHUB_SHA}"

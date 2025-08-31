@@ -1,3 +1,5 @@
+import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Button,
@@ -7,14 +9,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import { useRouter } from 'expo-router';
+import { Entity, listBankAccounts } from '../lib/entities';
 import {
   createDummyStatementWithTransactions,
   listStatementsWithMeta,
   StatementMeta,
 } from '../lib/statements';
-import { Entity, listBankAccounts } from '../lib/entities';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -76,6 +76,11 @@ export default function Index() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
+      <Button title="Bank statement" onPress={() => router.push("/bank-accounts")} />
+      <Button title="Expense categories" onPress={() => router.push("/expense-categories")} />
+        
+        
+      
       <Button title="Upload Statement" onPress={() => setModalVisible(true)} />
       <FlatList
         data={statements}
@@ -102,7 +107,7 @@ export default function Index() {
         )}
       />
       <Modal visible={modalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16 }}>
+        <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
           <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
           {banks.map((b) => (
             <Pressable
