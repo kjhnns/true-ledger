@@ -37,6 +37,19 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "58236ea4-9adf-49e4-a1e5-ab0595af9e28"
+      }
+    },
+    "owner": "johannesklumpe",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/58236ea4-9adf-49e4-a1e5-ab0595af9e28"
     }
   }
 }
