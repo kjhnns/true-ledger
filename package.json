@@ -4,12 +4,13 @@
   "version": "1.0.0",
   "scripts": {
   "deploy": "eas update --channel staging --message \"Staging Update\"",
-    "start": "expo start -c --tunnel",
+  "start": "expo start -c --tunnel",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
+  "lint": "expo lint",
+  "postinstall": "node ./scripts/create-wasm-stub.js",
     "test": "jest --runInBand && npx expo-doctor"
   },
   "dependencies": {
