@@ -9,12 +9,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Entity, listBankAccounts } from '../lib/entities';
+import { Entity } from '../lib/entities';
 import {
   createDummyStatementWithTransactions,
   listStatementsWithMeta,
   StatementMeta,
 } from '../lib/statements';
+import { loadBanksForModal } from '../lib/banks';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -46,8 +47,6 @@ export default function Index() {
     (async () => {
       const list = await listStatementsWithMeta();
       setStatements(list);
-      const b = await listBankAccounts();
-      setBanks(b);
     })();
   }, []);
 
@@ -74,6 +73,10 @@ export default function Index() {
     setFile(null);
   };
 
+  const openUploadModal = async () => {
+    await loadBanksForModal(setBanks, setModalVisible);
+  };
+
   return (
     <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
       <Button title="Banks" onPress={() => router.push("/bank-accounts")} />
@@ -81,7 +84,7 @@ export default function Index() {
         
         
       
-      <Button title="Upload Statement" onPress={() => setModalVisible(true)} />
+      <Button title="Upload Statement" onPress={openUploadModal} />
       <FlatList
         data={statements}
         keyExtractor={(s) => s.id}
@@ -107,7 +110,7 @@ export default function Index() {
         )}
       />
       <Modal visible={modalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16, paddingTop: 100 }}>
+        <View style={{ flex: 1, padding: 16, paddingTop: 120 }}>
           <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
           {banks.map((b) => (
             <Pressable
