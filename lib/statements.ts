@@ -167,6 +167,7 @@ export async function createDummyStatementWithTransactions(
       currency: bank.currency,
       shared,
       sharedAmount: shared ? Math.floor(amount / 2) : null,
+      description: null,
     });
   }
   return statement;
