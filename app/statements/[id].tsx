@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
+import { Text } from 'react-native-paper';
 import { useLocalSearchParams } from 'expo-router';
 import { getEntity } from '../../lib/entities';
 import { listTransactions, Transaction } from '../../lib/transactions';
@@ -34,31 +35,41 @@ export default function StatementTransactions() {
   }, [id]);
 
   const Header = () => (
-    <View className="flex-row py-2 border-b">
-      <Text className="flex-1 font-bold">Recipient</Text>
-      <Text className="flex-1 font-bold">Sender</Text>
-      <Text className="w-20 text-right font-bold">Amount</Text>
-      <Text className="w-16 text-center font-bold">Shared</Text>
-      <Text className="w-20 text-right font-bold">Shared Amt</Text>
+    <View
+      style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1 }}
+    >
+      <Text style={{ flex: 1, fontWeight: 'bold' }}>Recipient</Text>
+      <Text style={{ flex: 1, fontWeight: 'bold' }}>Sender</Text>
+      <Text style={{ width: 80, textAlign: 'right', fontWeight: 'bold' }}>
+        Amount
+      </Text>
+      <Text style={{ width: 64, textAlign: 'center', fontWeight: 'bold' }}>
+        Shared
+      </Text>
+      <Text style={{ width: 80, textAlign: 'right', fontWeight: 'bold' }}>
+        Shared Amt
+      </Text>
     </View>
   );
 
   return (
-    <View className="flex-1 p-4">
+    <View style={{ flex: 1, padding: 16 }}>
       <FlatList
         data={transactions}
         keyExtractor={(t) => t.id}
         ListHeaderComponent={<Header />}
         ListEmptyComponent={<Text>No transactions</Text>}
         renderItem={({ item }) => (
-          <View className="flex-row py-2 border-b">
-            <Text className="flex-1">{item.recipientLabel}</Text>
-            <Text className="flex-1">{item.senderLabel}</Text>
-            <Text className="w-20 text-right">{item.amount}</Text>
-            <Text className="w-16 text-center">
+          <View
+            style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1 }}
+          >
+            <Text style={{ flex: 1 }}>{item.recipientLabel}</Text>
+            <Text style={{ flex: 1 }}>{item.senderLabel}</Text>
+            <Text style={{ width: 80, textAlign: 'right' }}>{item.amount}</Text>
+            <Text style={{ width: 64, textAlign: 'center' }}>
               {item.shared ? 'Yes' : 'No'}
             </Text>
-            <Text className="w-20 text-right">
+            <Text style={{ width: 80, textAlign: 'right' }}>
               {item.sharedAmount ?? '-'}
             </Text>
           </View>

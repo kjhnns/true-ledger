@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Text, TextInput, View } from "react-native";
+import { Alert, View } from "react-native";
+import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
 
 const STORAGE_KEY = "openai_api_key";
@@ -18,6 +19,7 @@ export default function Settings() {
   const [hasKey, setHasKey] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
     (async () => {
@@ -66,9 +68,10 @@ export default function Settings() {
 
   if (!hasKey || editing) {
     return (
-      <View className="flex-1 p-5 justify-center">
-        <Text className="mb-2">OpenAI API key</Text>
+      <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
+        <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
         <TextInput
+          mode="outlined"
           secureTextEntry
           placeholder="sk-..."
           value={input}
@@ -76,26 +79,29 @@ export default function Settings() {
             setInput(text);
             if (error) setError("");
           }}
-          className="border p-2 mb-2 rounded"
+          style={{ marginBottom: 8 }}
         />
-        {error ? <Text className="text-red-500 mb-2">{error}</Text> : null}
-        <Button
-          title={hasKey ? "Save new key" : "Save key"}
-          onPress={handleSave}
-        />
+        {error ? (
+          <Text style={{ color: theme.colors.error, marginBottom: 8 }}>{error}</Text>
+        ) : null}
+        <Button mode="contained" onPress={handleSave}>
+          {hasKey ? 'Save new key' : 'Save key'}
+        </Button>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 p-5 justify-center">
-      <Text className="mb-2">OpenAI API key</Text>
-      <Text className="mb-4">
+    <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
+      <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
+      <Text style={{ marginBottom: 16 }}>
         Key saved • Last updated {formatDate(updatedAt)}
       </Text>
-      <Button title="Replace key" onPress={() => setEditing(true)} />
-      <View className="h-2" />
-      <Button title="Remove key" onPress={handleRemove} />
+      <Button mode="contained" onPress={() => setEditing(true)}>
+        Replace key
+      </Button>
+      <View style={{ height: 8 }} />
+      <Button onPress={handleRemove}>Remove key</Button>
     </View>
   );
 }
