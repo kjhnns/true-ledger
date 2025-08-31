@@ -25,7 +25,7 @@ function StatusRow({ item }: { item: StatementMeta }) {
     { checked: item.publishedAt !== null },
   ];
   return (
-    <View style={{ flexDirection: 'row', width: 80, justifyContent: 'space-between' }}>
+    <View className="flex-row w-20 justify-between">
       {statuses.map((s, i) => (
         <Text key={i}>{s.checked ? '[x]' : '[ ]'}</Text>
       ))}
@@ -78,12 +78,12 @@ export default function Index() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
-      <Button title="Banks" onPress={() => router.push("/bank-accounts")} />
-      <Button title="Expense categories" onPress={() => router.push("/expense-categories")} />
-        
-        
-      
+    <View className="flex-1 p-4 pt-12">
+      <Button title="Banks" onPress={() => router.push('/bank-accounts')} />
+      <Button
+        title="Expense categories"
+        onPress={() => router.push('/expense-categories')}
+      />
       <Button title="Upload Statement" onPress={openUploadModal} />
       <FlatList
         data={statements}
@@ -92,40 +92,34 @@ export default function Index() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push(`/statements/${item.id}`)}
-            style={{
-              flexDirection: 'row',
-              paddingVertical: 8,
-              borderBottomWidth: 1,
-            }}
+            className="flex-row py-2 border-b"
           >
-            <Text style={{ flex: 1 }}>{item.bankLabel}</Text>
-            <Text style={{ flex: 1 }}>
+            <Text className="flex-1">{item.bankLabel}</Text>
+            <Text className="flex-1">
               {new Date(item.uploadDate).toLocaleDateString()}
             </Text>
-            <Text style={{ width: 40, textAlign: 'center' }}>
-              {item.transactionCount}
-            </Text>
+            <Text className="w-10 text-center">{item.transactionCount}</Text>
             <StatusRow item={item} />
           </Pressable>
         )}
       />
       <Modal visible={modalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16, paddingTop: 120 }}>
-          <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
+        <View className="flex-1 p-4 pt-32">
+          <Text className="text-lg mb-2">Select Bank</Text>
           {banks.map((b) => (
             <Pressable
               key={b.id}
               onPress={() => setSelectedBank(b.id)}
-              style={{ flexDirection: 'row', paddingVertical: 4 }}
+              className="flex-row py-1"
             >
-              <Text style={{ marginRight: 8 }}>
+              <Text className="mr-2">
                 {selectedBank === b.id ? '[x]' : '[ ]'}
               </Text>
               <Text>{b.label}</Text>
             </Pressable>
           ))}
           <Button title="Pick PDF" onPress={pickFile} />
-          {file && <Text style={{ marginVertical: 8 }}>{file.name}</Text>}
+          {file && <Text className="my-2">{file.name}</Text>}
           <Button title="Upload" onPress={upload} />
           <Button
             title="Cancel"
