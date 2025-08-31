@@ -15,4 +15,5 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           APP_ENV: staging
-        run: npx eas update --channel staging --non-interactive --message "CI ${GITHUB_SHA}"
+        # Use the locally installed eas-cli to avoid version drift
+        run: npx --no-install eas update --channel staging --non-interactive --message "CI ${GITHUB_SHA}"

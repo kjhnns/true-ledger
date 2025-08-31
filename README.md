@@ -48,3 +48,13 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Continuous Integration & Babel
+
+The GitHub workflow installs dependencies with `npm ci` and runs `npx --no-install eas update`. The `eas-cli` version is pinned in `devDependencies`, so both local development and CI use the same release.
+
+If bundling fails with a Babel error:
+
+- Confirm `babel.config.js` only includes `expo-router/babel` and `react-native-reanimated/plugin` (the latter must be last).
+- Clear Metro's cache with `npx expo start -c`.
+- Ensure you're using the pinned `eas-cli` version by reinstalling dependencies with `npm ci`.
