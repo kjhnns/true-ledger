@@ -101,6 +101,37 @@ export async function getStatement(id: string): Promise<Statement | null> {
   return mapRow(row);
 }
 
+export async function archiveStatement(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'UPDATE statements SET archived_at=? WHERE id=?',
+    Date.now(),
+    id
+  );
+}
+
+export async function deleteStatement(id: string): Promise<void> {
+  const db = await getDb();
+  // remove transactions first
+  await db.runAsync('DELETE FROM transactions WHERE statement_id=?', id);
+  await db.runAsync('DELETE FROM statements WHERE id=?', id);
+}
+
+export async function reprocessStatement(id: string): Promise<void> {
+  const db = await getDb();
+  // reset processing/review/publish timestamps and status
+  await db.runAsync(
+    'UPDATE statements SET processed_at=NULL, reviewed_at=NULL, published_at=NULL, status=? WHERE id=?',
+    'new',
+    id
+  );
+}
+
+export async function unarchiveStatement(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE statements SET archived_at=NULL WHERE id=?', id);
+}
+
 export async function createDummyStatementWithTransactions(
   bankId: string,
   fileName: string

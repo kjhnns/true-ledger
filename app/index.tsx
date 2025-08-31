@@ -1,15 +1,12 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, ScrollView, View } from 'react-native';
-import { BottomNavigation, Button, DataTable, FAB, RadioButton, Text } from 'react-native-paper';
+import { BottomNavigation, Button, DataTable, Dialog, FAB, IconButton, Portal, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity } from '../lib/entities';
-import {
-  createDummyStatementWithTransactions,
-  listStatementsWithMeta,
-  StatementMeta,
-} from '../lib/statements';
+import { archiveStatement, createDummyStatementWithTransactions, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
 import Settings from './settings';
 
 function StatusRow({ item }: { item: StatementMeta }) {
@@ -24,7 +21,12 @@ function StatusRow({ item }: { item: StatementMeta }) {
       style={{ flexDirection: 'row', width: 80, justifyContent: 'space-between' }}
     >
       {statuses.map((s, i) => (
-        <Text key={i}>{s.checked ? '[x]' : '[ ]'}</Text>
+        <MaterialCommunityIcons
+          key={i}
+          name={s.checked ? 'check-circle' : 'checkbox-blank-circle-outline'}
+          size={16}
+          color={s.checked ? 'green' : 'gray'}
+        />
       ))}
     </View>
   );
@@ -80,71 +82,108 @@ export default function Index() {
     await loadBanksForModal(setBanks, setModalVisible);
   };
 
-  const StatementsRoute = () => (
-    <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
+  const StatementsRoute = () => {
+    const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
+    const [confirmVisible, setConfirmVisible] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-      {statements.length === 0 ? (
-        <Text>No statements</Text>
-      ) : (
-        <ScrollView>
-          <DataTable>
-            <DataTable.Header>
-              <DataTable.Title>Bank</DataTable.Title>
-              <DataTable.Title>Upload Date</DataTable.Title>
-              <DataTable.Title numeric>Txns</DataTable.Title>
-              <DataTable.Title>Progress</DataTable.Title>
-            </DataTable.Header>
-            {statements.map((item) => (
-              <DataTable.Row
-                key={item.id}
-                onPress={() => router.push(`/statements/${item.id}`)}
-              >
-                <DataTable.Cell>{item.bankLabel}</DataTable.Cell>
-                <DataTable.Cell>
-                  {new Date(item.uploadDate).toLocaleDateString()}
-                </DataTable.Cell>
-                <DataTable.Cell numeric>{item.transactionCount}</DataTable.Cell>
-                <DataTable.Cell style={{ width: 80 }}>
-                  <StatusRow item={item} />
-                </DataTable.Cell>
-              </DataTable.Row>
-            ))}
-          </DataTable>
-        </ScrollView>
-      )}
-      <Modal visible={modalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16, paddingTop: 128 }}>
-          <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
-          <RadioButton.Group
-            onValueChange={(value) => setSelectedBank(value)}
-            value={selectedBank ?? ''}
-          >
-            {banks.map((b) => (
-              <RadioButton.Item key={b.id} label={b.label} value={b.id} />
-            ))}
-          </RadioButton.Group>
-          <Button onPress={pickFile}>Pick PDF</Button>
-          {file && <Text style={{ marginVertical: 8 }}>{file.name}</Text>}
-          <Button onPress={upload}>Upload</Button>
-          <Button
-            onPress={() => {
-              setModalVisible(false);
-              setSelectedBank(null);
-              setFile(null);
-            }}
-          >
-            Cancel
-          </Button>
-        </View>
-      </Modal>
-      <FAB
-        icon="upload"
-        onPress={openUploadModal}
-        style={{ position: 'absolute', right: 16, bottom: 16 }}
-        accessibilityLabel="Upload statement"
-      />
-    </View>
-  );
+    const filtered = statements.filter((s) =>
+      viewArchived === 'archived' ? s.archivedAt !== null : s.archivedAt === null
+    );
+
+    return (
+      <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
+
+        <SegmentedButtons
+          value={viewArchived}
+          onValueChange={(v) => setViewArchived(v as 'current' | 'archived')}
+          buttons={[{ value: 'current', label: 'Current' }, { value: 'archived', label: 'Archived' }]}
+          style={{ marginBottom: 12 }}
+        />
+
+        {filtered.length === 0 ? (
+          <Text>No statements</Text>
+        ) : (
+          <ScrollView>
+            <DataTable>
+              <DataTable.Header>
+                <DataTable.Title>Bank</DataTable.Title>
+                <DataTable.Title>Upload Date</DataTable.Title>
+                <DataTable.Title numeric>Txns</DataTable.Title>
+                <DataTable.Title>Status: New</DataTable.Title>
+                <DataTable.Title>Status: Processed</DataTable.Title>
+                <DataTable.Title>Status: Reviewed</DataTable.Title>
+                <DataTable.Title>Status: Published</DataTable.Title>
+                <DataTable.Title>Actions</DataTable.Title>
+              </DataTable.Header>
+              {filtered.map((item) => (
+                <DataTable.Row key={item.id} onPress={() => router.push(`/statements/${item.id}`)}>
+                  <DataTable.Cell>{item.bankLabel}</DataTable.Cell>
+                  <DataTable.Cell>{new Date(item.uploadDate).toLocaleDateString()}</DataTable.Cell>
+                  <DataTable.Cell numeric>{item.transactionCount}</DataTable.Cell>
+                  <DataTable.Cell>
+                    <MaterialCommunityIcons name={item.status === 'new' ? 'check-circle' : 'checkbox-blank-circle-outline'} size={18} color={item.status === 'new' ? 'green' : 'gray'} />
+                  </DataTable.Cell>
+                  <DataTable.Cell>
+                    <MaterialCommunityIcons name={item.processedAt ? 'check-circle' : 'checkbox-blank-circle-outline'} size={18} color={item.processedAt ? 'green' : 'gray'} />
+                  </DataTable.Cell>
+                  <DataTable.Cell>
+                    <MaterialCommunityIcons name={item.reviewedAt ? 'check-circle' : 'checkbox-blank-circle-outline'} size={18} color={item.reviewedAt ? 'green' : 'gray'} />
+                  </DataTable.Cell>
+                  <DataTable.Cell>
+                    <MaterialCommunityIcons name={item.publishedAt ? 'check-circle' : 'checkbox-blank-circle-outline'} size={18} color={item.publishedAt ? 'green' : 'gray'} />
+                  </DataTable.Cell>
+                  <DataTable.Cell style={{ flexDirection: 'row' }}>
+                    <IconButton icon="autorenew" size={20} onPress={async () => { await reprocessStatement(item.id); await refreshStatements(); }} accessibilityLabel={`Reprocess statement ${item.id}`} />
+                    <IconButton icon={viewArchived === 'archived' ? 'archive-arrow-up' : 'archive'} size={20} onPress={async () => { if (viewArchived === 'archived') { await unarchiveStatement(item.id); } else { await archiveStatement(item.id); } await refreshStatements(); }} accessibilityLabel={viewArchived === 'archived' ? `Unarchive statement ${item.id}` : `Archive statement ${item.id}`} />
+                    <IconButton icon="delete" size={20} onPress={() => { setDeleteTarget(item.id); setConfirmVisible(true); }} accessibilityLabel={`Delete statement ${item.id}`} />
+                  </DataTable.Cell>
+                </DataTable.Row>
+              ))}
+            </DataTable>
+          </ScrollView>
+        )}
+
+        <Portal>
+          <Dialog visible={confirmVisible} onDismiss={() => setConfirmVisible(false)}>
+            <Dialog.Title>Confirm delete</Dialog.Title>
+            <Dialog.Content>
+              <Text>Are you sure you want to permanently delete this statement?</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setConfirmVisible(false)}>Cancel</Button>
+              <Button onPress={async () => {
+                if (deleteTarget) {
+                  await deleteStatement(deleteTarget);
+                  setDeleteTarget(null);
+                  setConfirmVisible(false);
+                  await refreshStatements();
+                }
+              }}>Delete</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+
+        <Modal visible={modalVisible} animationType="slide">
+          <View style={{ flex: 1, padding: 16, paddingTop: 128 }}>
+            <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
+            <RadioButton.Group onValueChange={(value) => setSelectedBank(value)} value={selectedBank ?? ''}>
+              {banks.map((b) => (
+                <RadioButton.Item key={b.id} label={b.label} value={b.id} />
+              ))}
+            </RadioButton.Group>
+            <Button onPress={pickFile}>Pick PDF</Button>
+            {file && <Text style={{ marginVertical: 8 }}>{file.name}</Text>}
+            <Button onPress={upload}>Upload</Button>
+            <Button onPress={() => { setModalVisible(false); setSelectedBank(null); setFile(null); }}>Cancel</Button>
+          </View>
+        </Modal>
+
+        <FAB icon="upload" onPress={openUploadModal} style={{ position: 'absolute', right: 16, bottom: 16 }} accessibilityLabel="Upload statement" />
+
+      </View>
+    );
+  };
 
   const ManageRoute = () => (
     <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
