@@ -38,9 +38,26 @@ export const sqliteMock = {
         };
       }
       if (sql.startsWith('SELECT COUNT(*) as count FROM transactions')) {
+        if (sql.includes('reviewed_at IS NULL')) {
+          return {
+            count: tables.transactions.filter(
+              (t) => t.statement_id === param && !t.reviewed_at
+            ).length,
+          };
+        }
         return {
           count: tables.transactions.filter((t) => t.statement_id === param).length,
         };
+      }
+      if (
+        sql.startsWith(
+          'SELECT MIN(created_at) as min, MAX(created_at) as max FROM transactions'
+        )
+      ) {
+        const list = tables.transactions.filter((t) => t.statement_id === param);
+        if (list.length === 0) return { min: null, max: null };
+        const times = list.map((t) => t.created_at);
+        return { min: Math.min(...times), max: Math.max(...times) };
       }
       if (sql.includes('rowid = last_insert_rowid()')) {
         const table = sql.includes('FROM entities')
@@ -140,7 +157,15 @@ export const sqliteMock = {
             if (col === 'shared') row.shared = value;
             if (col === 'shared_amount') row.shared_amount = value;
             if (col === 'description') row.description = value;
+            if (col === 'reviewed_at') row.reviewed_at = value;
           });
+        }
+      } else if (sql.startsWith('UPDATE statements SET status=')) {
+        const [status, reviewed_at, id] = params;
+        const row = tables.statements.find((r) => r.id === id);
+        if (row) {
+          row.status = status;
+          row.reviewed_at = reviewed_at;
         }
       }
     },

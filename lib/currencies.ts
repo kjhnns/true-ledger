@@ -1,14 +1,24 @@
 export const SUPPORTED_CURRENCIES = [
   'EUR',
-  'CHF',
   'USD',
+  'CHF',
   'BRL',
   'GBP',
   'JPY',
-  'CAD',
   'AUD',
+  'CAD',
   'CNY',
   'SEK',
+  'NZD',
+  'MXN',
+  'INR',
+  'HKD',
+  'SGD',
+  'KRW',
+  'NOK',
+  'TRY',
+  'RUB',
+  'ZAR',
 ] as const;
 
 export type Currency = (typeof SUPPORTED_CURRENCIES)[number];
