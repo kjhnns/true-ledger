@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import { Button, Text, TextInput, useTheme } from 'react-native-paper';
-import { BankAccountInput, bankAccountSchema } from '../../lib/entities';
+import { Button, List, Menu, Text, TextInput, useTheme } from 'react-native-paper';
 import { SUPPORTED_CURRENCIES } from '../../lib/currencies';
+import { BankAccountInput, bankAccountSchema } from '../../lib/entities';
 
 export type Props = {
   initial?: { label: string; prompt: string; currency: string };
@@ -17,6 +17,7 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
     initial?.currency ?? SUPPORTED_CURRENCIES[2]
   );
   const [error, setError] = useState<string>('');
+  const [menuVisible, setMenuVisible] = useState(false);
   const theme = useTheme();
 
   const handleSave = async () => {
@@ -36,35 +37,54 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ marginBottom: 4 }}>Label</Text>
-      <TextInput
-        mode="outlined"
-        value={label}
-        onChangeText={setLabel}
-        style={{ marginBottom: 12 }}
-      />
-      <Text style={{ marginBottom: 4 }}>Prompt</Text>
-      <TextInput
-        mode="outlined"
-        value={prompt}
-        onChangeText={setPrompt}
-        multiline
-        style={{ marginBottom: 12, height: 128 }}
-      />
-      <Text style={{ marginBottom: 4 }}>Currency</Text>
-      <TextInput
-        mode="outlined"
-        value={currency}
-        onChangeText={setCurrency}
-        autoCapitalize="characters"
-        style={{ marginBottom: 12 }}
-      />
-      {error ? (
-        <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
-      ) : null}
-      <Button mode="contained" onPress={handleSave}>
-        {submitLabel}
-      </Button>
+      <List.Section>
+        <List.Subheader>Bank details</List.Subheader>
+        <Text style={{ marginBottom: 4 }}>Label</Text>
+        <TextInput
+          mode="outlined"
+          value={label}
+          onChangeText={setLabel}
+          style={{ marginBottom: 12 }}
+        />
+        <Text style={{ marginBottom: 4 }}>Prompt</Text>
+        <TextInput
+          mode="outlined"
+          value={prompt}
+          onChangeText={setPrompt}
+          multiline
+          style={{ marginBottom: 12, height: 128 }}
+        />
+        <Text style={{ marginBottom: 4 }}>Currency</Text>
+        <Menu
+          visible={menuVisible}
+          onDismiss={() => setMenuVisible(false)}
+          anchor={
+            <Button mode="outlined" onPress={() => setMenuVisible(true)} style={{ marginBottom: 12 }}>
+              {currency}
+            </Button>
+          }
+        >
+          {SUPPORTED_CURRENCIES.map((c) => (
+            <Menu.Item
+              key={c}
+              onPress={() => {
+                setCurrency(c);
+                setMenuVisible(false);
+              }}
+              title={c}
+            />
+          ))}
+        </Menu>
+      </List.Section>
+
+      <View style={{ marginTop: 12 }}>
+        {error ? (
+          <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
+        ) : null}
+        <Button mode="contained" onPress={handleSave}>
+          {submitLabel}
+        </Button>
+      </View>
     </View>
   );
 }
