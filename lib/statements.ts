@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { getDb } from './db';
+import { getEntity, listExpenseCategories } from './entities';
+import { createTransaction } from './transactions';
 
 export const STATEMENT_STATUSES = ['new', 'processed', 'reviewed', 'published'] as const;
 export type StatementStatus = (typeof STATEMENT_STATUSES)[number];
@@ -97,4 +99,44 @@ export async function getStatement(id: string): Promise<Statement | null> {
   );
   if (!row) return null;
   return mapRow(row);
+}
+
+export async function createDummyStatementWithTransactions(
+  bankId: string,
+  fileName: string
+): Promise<Statement> {
+  if (!fileName.toLowerCase().endsWith('.pdf')) {
+    throw new Error('Only PDF files are allowed');
+  }
+  const bank = await getEntity(bankId);
+  if (!bank || bank.category !== 'bank') {
+    throw new Error('Invalid bank');
+  }
+  const categories = await listExpenseCategories();
+  if (categories.length === 0) {
+    throw new Error('No expense categories available');
+  }
+  const statement = await createStatement({
+    bankId,
+    uploadDate: Date.now(),
+    file: fileName,
+    status: 'new',
+  });
+  for (let i = 0; i < 10; i++) {
+    const recipient =
+      categories[Math.floor(Math.random() * categories.length)];
+    const amount = Math.floor(Math.random() * 10000) + 1;
+    const shared = Math.random() < 0.5;
+    await createTransaction({
+      statementId: statement.id,
+      recipientId: recipient.id,
+      senderId: bank.id,
+      createdAt: Date.now(),
+      amount,
+      currency: bank.currency,
+      shared,
+      sharedAmount: shared ? Math.floor(amount / 2) : null,
+    });
+  }
+  return statement;
 }

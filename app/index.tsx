@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
-import { listStatementsWithMeta, StatementMeta } from '../lib/statements';
+import {
+  Button,
+  FlatList,
+  Modal,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
+import {
+  createDummyStatementWithTransactions,
+  listStatementsWithMeta,
+  StatementMeta,
+} from '../lib/statements';
+import { Entity, listBankAccounts } from '../lib/entities';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -19,23 +33,57 @@ function StatusRow({ item }: { item: StatementMeta }) {
 }
 
 export default function Index() {
+  const router = useRouter();
   const [statements, setStatements] = useState<StatementMeta[]>([]);
+  const [banks, setBanks] = useState<Entity[]>([]);
+  const [selectedBank, setSelectedBank] = useState<string | null>(null);
+  const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(
+    null
+  );
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     (async () => {
       const list = await listStatementsWithMeta();
       setStatements(list);
+      const b = await listBankAccounts();
+      setBanks(b);
     })();
   }, []);
 
+  const refreshStatements = async () => {
+    const list = await listStatementsWithMeta();
+    setStatements(list);
+  };
+
+  const pickFile = async () => {
+    const res = await DocumentPicker.getDocumentAsync({
+      type: 'application/pdf',
+    });
+    if (!res.canceled) {
+      setFile(res.assets[0]);
+    }
+  };
+
+  const upload = async () => {
+    if (!selectedBank || !file) return;
+    await createDummyStatementWithTransactions(selectedBank, file.name);
+    await refreshStatements();
+    setModalVisible(false);
+    setSelectedBank(null);
+    setFile(null);
+  };
+
   return (
     <View style={{ flex: 1, padding: 16 }}>
+      <Button title="Upload Statement" onPress={() => setModalVisible(true)} />
       <FlatList
         data={statements}
         keyExtractor={(s) => s.id}
         ListEmptyComponent={<Text>No statements</Text>}
         renderItem={({ item }) => (
-          <View
+          <Pressable
+            onPress={() => router.push(`/statements/${item.id}`)}
             style={{
               flexDirection: 'row',
               paddingVertical: 8,
@@ -50,9 +98,37 @@ export default function Index() {
               {item.transactionCount}
             </Text>
             <StatusRow item={item} />
-          </View>
+          </Pressable>
         )}
       />
+      <Modal visible={modalVisible} animationType="slide">
+        <View style={{ flex: 1, padding: 16 }}>
+          <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
+          {banks.map((b) => (
+            <Pressable
+              key={b.id}
+              onPress={() => setSelectedBank(b.id)}
+              style={{ flexDirection: 'row', paddingVertical: 4 }}
+            >
+              <Text style={{ marginRight: 8 }}>
+                {selectedBank === b.id ? '[x]' : '[ ]'}
+              </Text>
+              <Text>{b.label}</Text>
+            </Pressable>
+          ))}
+          <Button title="Pick PDF" onPress={pickFile} />
+          {file && <Text style={{ marginVertical: 8 }}>{file.name}</Text>}
+          <Button title="Upload" onPress={upload} />
+          <Button
+            title="Cancel"
+            onPress={() => {
+              setModalVisible(false);
+              setSelectedBank(null);
+              setFile(null);
+            }}
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
