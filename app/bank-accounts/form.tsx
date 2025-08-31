@@ -33,28 +33,28 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
   };
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ marginBottom: 4 }}>Label</Text>
+    <View className="flex-1 p-4">
+      <Text className="mb-1">Label</Text>
       <TextInput
         value={label}
         onChangeText={setLabel}
-        style={{ borderWidth: 1, padding: 8, marginBottom: 12 }}
+        className="border p-2 mb-3 rounded"
       />
-      <Text style={{ marginBottom: 4 }}>Prompt</Text>
+      <Text className="mb-1">Prompt</Text>
       <TextInput
         value={prompt}
         onChangeText={setPrompt}
         multiline
-        style={{ borderWidth: 1, padding: 8, height: 120, marginBottom: 12 }}
+        className="border p-2 h-32 mb-3 rounded"
       />
-      <Text style={{ marginBottom: 4 }}>Currency</Text>
+      <Text className="mb-1">Currency</Text>
       <TextInput
         value={currency}
         onChangeText={setCurrency}
         autoCapitalize="characters"
-        style={{ borderWidth: 1, padding: 8, marginBottom: 12 }}
+        className="border p-2 mb-3 rounded"
       />
-      {error ? <Text style={{ color: 'red', marginBottom: 12 }}>{error}</Text> : null}
+      {error ? <Text className="text-red-500 mb-3">{error}</Text> : null}
       <Button title={submitLabel} onPress={handleSave} />
     </View>
   );

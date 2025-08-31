@@ -66,14 +66,8 @@ export default function Settings() {
 
   if (!hasKey || editing) {
     return (
-      <View
-        style={{
-          flex: 1,
-          padding: 20,
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
+      <View className="flex-1 p-5 justify-center">
+        <Text className="mb-2">OpenAI API key</Text>
         <TextInput
           secureTextEntry
           placeholder="sk-..."
@@ -82,11 +76,9 @@ export default function Settings() {
             setInput(text);
             if (error) setError("");
           }}
-          style={{ borderWidth: 1, padding: 8, marginBottom: 8 }}
+          className="border p-2 mb-2 rounded"
         />
-        {error ? (
-          <Text style={{ color: "red", marginBottom: 8 }}>{error}</Text>
-        ) : null}
+        {error ? <Text className="text-red-500 mb-2">{error}</Text> : null}
         <Button
           title={hasKey ? "Save new key" : "Save key"}
           onPress={handleSave}
@@ -96,15 +88,13 @@ export default function Settings() {
   }
 
   return (
-    <View
-      style={{ flex: 1, padding: 20, justifyContent: "center" }}
-    >
-      <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
-      <Text style={{ marginBottom: 16 }}>
+    <View className="flex-1 p-5 justify-center">
+      <Text className="mb-2">OpenAI API key</Text>
+      <Text className="mb-4">
         Key saved • Last updated {formatDate(updatedAt)}
       </Text>
       <Button title="Replace key" onPress={() => setEditing(true)} />
-      <View style={{ height: 8 }} />
+      <View className="h-2" />
       <Button title="Remove key" onPress={handleRemove} />
     </View>
   );

@@ -37,28 +37,21 @@ export default function BankAccountsList() {
   };
 
   const renderItem = ({ item }: { item: BankAccount }) => (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-      }}
-    >
+    <View className="flex-row items-center p-4 border-b">
       <TouchableOpacity
-        style={{ flex: 1 }}
+        className="flex-1"
         onPress={() => router.push(`/bank-accounts/${item.id}`)}
       >
-        <Text style={{ fontSize: 16 }}>{item.label}</Text>
+        <Text className="text-base">{item.label}</Text>
       </TouchableOpacity>
       <Button title="Delete" onPress={() => confirmDelete(item.id)} />
     </View>
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       <FlatList data={accounts} keyExtractor={(i) => i.id} renderItem={renderItem} />
-      <View style={{ padding: 16 }}>
+      <View className="p-4">
         <Button
           title="+ Add bank account"
           onPress={() => router.push('/bank-accounts/new')}

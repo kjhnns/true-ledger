@@ -145,54 +145,48 @@ export default function ExpenseCategoriesPage() {
   }: {
     item: { item: ExpenseCategory; depth: number };
   }) => (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-      }}
-    >
+    <View className="flex-row items-center p-4 border-b">
       <TouchableOpacity
-        style={{ flex: 1, paddingLeft: item.depth * 16 }}
+        className="flex-1"
+        style={{ paddingLeft: item.depth * 16 }}
         onPress={() => handleEdit(item.item)}
       >
-        <Text style={{ fontSize: 16 }}>{item.item.label}</Text>
+        <Text className="text-base">{item.item.label}</Text>
       </TouchableOpacity>
       <Button title="Delete" onPress={() => confirmDelete(item.item.id)} />
     </View>
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ padding: 16, borderBottomWidth: 1 }}>
-        <Text style={{ marginBottom: 4 }}>Label</Text>
+    <View className="flex-1">
+      <View className="p-4 border-b">
+        <Text className="mb-1">Label</Text>
         <TextInput
           value={label}
           onChangeText={setLabel}
-          style={{ borderWidth: 1, padding: 8, marginBottom: 12 }}
+          className="border p-2 mb-3 rounded"
         />
-        <Text style={{ marginBottom: 4 }}>Prompt</Text>
+        <Text className="mb-1">Prompt</Text>
         <TextInput
           value={prompt}
           onChangeText={setPrompt}
           multiline
-          style={{ borderWidth: 1, padding: 8, height: 80, marginBottom: 12 }}
+          className="border p-2 h-20 mb-3 rounded"
         />
-        <Text style={{ marginBottom: 4 }}>Parent</Text>
+        <Text className="mb-1">Parent</Text>
         <TouchableOpacity
           onPress={() => setParentVisible(true)}
-          style={{ borderWidth: 1, padding: 8, marginBottom: 12 }}
+          className="border p-2 mb-3 rounded"
         >
           <Text>{selectedParent ? selectedParent.label : 'None'}</Text>
         </TouchableOpacity>
-        {error ? <Text style={{ color: 'red', marginBottom: 12 }}>{error}</Text> : null}
+        {error ? <Text className="text-red-500 mb-3">{error}</Text> : null}
         <Button
           title={editingId ? 'Update Category' : 'Add Category'}
           onPress={handleSubmit}
         />
         {editingId ? (
-          <View style={{ marginTop: 8 }}>
+          <View className="mt-2">
             <Button title="Cancel" onPress={resetForm} />
           </View>
         ) : null}
@@ -203,28 +197,16 @@ export default function ExpenseCategoriesPage() {
         renderItem={renderItem}
       />
       <Modal visible={parentVisible} transparent animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: 'white',
-              margin: 32,
-              padding: 16,
-              maxHeight: '80%',
-            }}
-          >
+        <View className="flex-1 bg-black/50 justify-center">
+          <View className="bg-white m-8 p-4 max-h-[80%]">
             <FlatList
               data={[{ item: null, depth: 0 }, ...parentOptions]}
               keyExtractor={(i, idx) => (i.item ? i.item.id : 'none') + idx}
               renderItem={({ item }) =>
                 item.item ? (
                   <TouchableOpacity
-                    style={{ padding: 8, paddingLeft: item.depth * 16 }}
+                    className="p-2"
+                    style={{ paddingLeft: item.depth * 16 }}
                     onPress={() => {
                       setParentId(item.item!.id);
                       setParentVisible(false);
@@ -234,7 +216,7 @@ export default function ExpenseCategoriesPage() {
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    style={{ padding: 8 }}
+                    className="p-2"
                     onPress={() => {
                       setParentId(null);
                       setParentVisible(false);
