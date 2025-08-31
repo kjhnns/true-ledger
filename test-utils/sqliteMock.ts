@@ -60,6 +60,9 @@ export const sqliteMock = {
       if (sql.startsWith('SELECT * FROM statements WHERE id=?')) {
         return tables.statements.find((r) => r.id === param) ?? null;
       }
+      if (sql.startsWith('SELECT * FROM transactions WHERE id=?')) {
+       return tables.transactions.find((r) => r.id === param) ?? null;
+      }
       return null;
     },
     runAsync: async (sql: string, ...params: any[]) => {
@@ -105,7 +108,7 @@ export const sqliteMock = {
           archived_at: null,
         });
       } else if (sql.startsWith('INSERT INTO transactions')) {
-        const [statement_id, recipient_id, sender_id, created_at, processed_at, archived_at, location, amount, currency, reviewed_at, shared, shared_amount] = params;
+        const [statement_id, recipient_id, sender_id, created_at, processed_at, archived_at, location, description, amount, currency, reviewed_at, shared, shared_amount] = params;
         tables.transactions.push({
           id: String(counters.transactions++),
           statement_id,
@@ -115,12 +118,30 @@ export const sqliteMock = {
           processed_at,
           archived_at,
           location,
+          description,
           amount,
           currency,
           reviewed_at,
           shared,
           shared_amount,
         });
+      } else if (sql.startsWith('UPDATE transactions')) {
+        const id = params[params.length - 1];
+        const row = tables.transactions.find((r) => r.id === id);
+        if (row) {
+          const cols = sql
+            .slice('UPDATE transactions SET '.length, sql.indexOf(' WHERE'))
+            .split(',')
+            .map((s) => s.trim().split('=')[0]);
+          cols.forEach((col, idx) => {
+            const value = params[idx];
+            if (col === 'recipient_id') row.recipient_id = value;
+            if (col === 'sender_id') row.sender_id = value;
+            if (col === 'shared') row.shared = value;
+            if (col === 'shared_amount') row.shared_amount = value;
+            if (col === 'description') row.description = value;
+          });
+        }
       }
     },
   }),

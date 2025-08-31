@@ -50,6 +50,7 @@ export async function initDb() {
       processed_at INTEGER,
       archived_at INTEGER,
       location TEXT,
+      description TEXT,
       amount INTEGER NOT NULL,
       currency TEXT NOT NULL,
       reviewed_at INTEGER,

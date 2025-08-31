@@ -11,6 +11,7 @@ export interface Transaction {
   processedAt: number | null;
   archivedAt: number | null;
   location: string | null;
+  description: string | null;
   amount: number;
   currency: Currency;
   reviewedAt: number | null;
@@ -26,6 +27,7 @@ export const transactionSchema = z.object({
   processedAt: z.number().int().nullable().optional(),
   archivedAt: z.number().int().nullable().optional(),
   location: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   amount: z.number().int().nonnegative(),
   currency: z.enum(SUPPORTED_CURRENCIES),
   reviewedAt: z.number().int().nullable().optional(),
@@ -45,6 +47,7 @@ function mapRow(row: any): Transaction {
     processedAt: row.processed_at ?? null,
     archivedAt: row.archived_at ?? null,
     location: row.location ?? null,
+    description: row.description ?? null,
     amount: row.amount,
     currency: row.currency as Currency,
     reviewedAt: row.reviewed_at ?? null,
@@ -59,7 +62,7 @@ export async function createTransaction(
   const parsed = transactionSchema.parse(input);
   const db = await getDb();
   await db.runAsync(
-    'INSERT INTO transactions (statement_id, recipient_id, sender_id, created_at, processed_at, archived_at, location, amount, currency, reviewed_at, shared, shared_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+    'INSERT INTO transactions (statement_id, recipient_id, sender_id, created_at, processed_at, archived_at, location, description, amount, currency, reviewed_at, shared, shared_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
     parsed.statementId,
     parsed.recipientId ?? null,
     parsed.senderId ?? null,
@@ -67,6 +70,7 @@ export async function createTransaction(
     parsed.processedAt ?? null,
     parsed.archivedAt ?? null,
     parsed.location ?? null,
+    parsed.description ?? null,
     parsed.amount,
     parsed.currency,
     parsed.reviewedAt ?? null,
@@ -88,4 +92,59 @@ export async function listTransactions(
     statementId
   );
   return rows.map(mapRow);
+}
+
+export type TransactionUpdateInput = Partial<
+  Pick<
+    TransactionInput,
+    'recipientId' | 'senderId' | 'shared' | 'sharedAmount' | 'description'
+  >
+>;
+
+export async function updateTransaction(
+  id: string,
+  input: TransactionUpdateInput
+): Promise<Transaction> {
+  const db = await getDb();
+  const existing = await db.getFirstAsync<any>(
+    'SELECT * FROM transactions WHERE id=?',
+    id
+  );
+  if (!existing) throw new Error('Transaction not found');
+
+  const updates: string[] = [];
+  const params: any[] = [];
+  if (input.recipientId !== undefined) {
+    updates.push('recipient_id=?');
+    params.push(input.recipientId ?? null);
+  }
+  if (input.senderId !== undefined) {
+    updates.push('sender_id=?');
+    params.push(input.senderId ?? null);
+  }
+  if (input.shared !== undefined) {
+    updates.push('shared=?');
+    params.push(input.shared ? 1 : 0);
+  }
+  if (input.sharedAmount !== undefined) {
+    updates.push('shared_amount=?');
+    params.push(input.sharedAmount ?? null);
+  }
+  if (input.description !== undefined) {
+    updates.push('description=?');
+    params.push(input.description ?? null);
+  }
+  if (updates.length === 0) {
+    return mapRow(existing);
+  }
+  params.push(id);
+  await db.runAsync(
+    `UPDATE transactions SET ${updates.join(', ')} WHERE id=?`,
+    ...params
+  );
+  const row = await db.getFirstAsync<any>(
+    'SELECT * FROM transactions WHERE id=?',
+    id
+  );
+  return mapRow(row);
 }
