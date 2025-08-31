@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FlatList, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { ScrollView, View } from 'react-native';
+import { DataTable, Text } from 'react-native-paper';
 import { useLocalSearchParams } from 'expo-router';
 import { getEntity } from '../../lib/entities';
 import { listTransactions, Transaction } from '../../lib/transactions';
@@ -34,47 +34,38 @@ export default function StatementTransactions() {
     })();
   }, [id]);
 
-  const Header = () => (
-    <View
-      style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1 }}
-    >
-      <Text style={{ flex: 1, fontWeight: 'bold' }}>Recipient</Text>
-      <Text style={{ flex: 1, fontWeight: 'bold' }}>Sender</Text>
-      <Text style={{ width: 80, textAlign: 'right', fontWeight: 'bold' }}>
-        Amount
-      </Text>
-      <Text style={{ width: 64, textAlign: 'center', fontWeight: 'bold' }}>
-        Shared
-      </Text>
-      <Text style={{ width: 80, textAlign: 'right', fontWeight: 'bold' }}>
-        Shared Amt
-      </Text>
-    </View>
-  );
-
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <FlatList
-        data={transactions}
-        keyExtractor={(t) => t.id}
-        ListHeaderComponent={<Header />}
-        ListEmptyComponent={<Text>No transactions</Text>}
-        renderItem={({ item }) => (
-          <View
-            style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1 }}
-          >
-            <Text style={{ flex: 1 }}>{item.recipientLabel}</Text>
-            <Text style={{ flex: 1 }}>{item.senderLabel}</Text>
-            <Text style={{ width: 80, textAlign: 'right' }}>{item.amount}</Text>
-            <Text style={{ width: 64, textAlign: 'center' }}>
-              {item.shared ? 'Yes' : 'No'}
-            </Text>
-            <Text style={{ width: 80, textAlign: 'right' }}>
-              {item.sharedAmount ?? '-'}
-            </Text>
-          </View>
-        )}
-      />
+      {transactions.length === 0 ? (
+        <Text>No transactions</Text>
+      ) : (
+        <ScrollView>
+          <DataTable>
+            <DataTable.Header>
+              <DataTable.Title>Recipient</DataTable.Title>
+              <DataTable.Title>Sender</DataTable.Title>
+              <DataTable.Title numeric>Amount</DataTable.Title>
+              <DataTable.Title style={{ justifyContent: 'center', width: 64 }}>
+                Shared
+              </DataTable.Title>
+              <DataTable.Title numeric>Shared Amt</DataTable.Title>
+            </DataTable.Header>
+            {transactions.map((item) => (
+              <DataTable.Row key={item.id}>
+                <DataTable.Cell>{item.recipientLabel}</DataTable.Cell>
+                <DataTable.Cell>{item.senderLabel}</DataTable.Cell>
+                <DataTable.Cell numeric>{item.amount}</DataTable.Cell>
+                <DataTable.Cell style={{ justifyContent: 'center', width: 64 }}>
+                  {item.shared ? 'Yes' : 'No'}
+                </DataTable.Cell>
+                <DataTable.Cell numeric>
+                  {item.sharedAmount ?? '-'}
+                </DataTable.Cell>
+              </DataTable.Row>
+            ))}
+          </DataTable>
+        </ScrollView>
+      )}
     </View>
   );
 }
