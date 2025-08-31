@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, ScrollView, View } from 'react-native';
-import { Button, DataTable, RadioButton, Text } from 'react-native-paper';
+import { BottomNavigation, Button, DataTable, FAB, RadioButton, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity } from '../lib/entities';
 import {
@@ -10,6 +10,7 @@ import {
   listStatementsWithMeta,
   StatementMeta,
 } from '../lib/statements';
+import Settings from './settings';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -31,6 +32,12 @@ function StatusRow({ item }: { item: StatementMeta }) {
 
 export default function Index() {
   const router = useRouter();
+  const [navIndex, setNavIndex] = useState(0);
+  const [navRoutes] = useState([
+    { key: 'statements', title: 'Statements', icon: 'file-document' },
+    { key: 'manage', title: 'Manage', icon: 'folder' },
+    { key: 'settings', title: 'Settings', icon: 'cog' },
+  ]);
   const [statements, setStatements] = useState<StatementMeta[]>([]);
   const [banks, setBanks] = useState<Entity[]>([]);
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
@@ -73,13 +80,9 @@ export default function Index() {
     await loadBanksForModal(setBanks, setModalVisible);
   };
 
-  return (
+  const StatementsRoute = () => (
     <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
-      <Button onPress={() => router.push('/bank-accounts')}>Banks</Button>
-      <Button onPress={() => router.push('/expense-categories')}>
-        Expense categories
-      </Button>
-      <Button onPress={openUploadModal}>Upload Statement</Button>
+
       {statements.length === 0 ? (
         <Text>No statements</Text>
       ) : (
@@ -134,6 +137,44 @@ export default function Index() {
           </Button>
         </View>
       </Modal>
+      <FAB
+        icon="upload"
+        onPress={openUploadModal}
+        style={{ position: 'absolute', right: 16, bottom: 16 }}
+        accessibilityLabel="Upload statement"
+      />
     </View>
+  );
+
+  const ManageRoute = () => (
+    <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
+      <Text style={{ fontSize: 18, marginBottom: 8 }}>Manage</Text>
+      <Button mode="contained" onPress={() => router.push('/bank-accounts')} style={{ marginBottom: 8 }}>
+        Manage bank accounts
+      </Button>
+      <Button mode="contained" onPress={() => router.push('/expense-categories')}>
+        Manage expense categories
+      </Button>
+    </View>
+  );
+
+  const SettingsRoute = () => (
+    <View style={{ flex: 1 }}>
+      <Settings />
+    </View>
+  );
+
+  const renderScene = BottomNavigation.SceneMap({
+    statements: StatementsRoute,
+    manage: ManageRoute,
+    settings: SettingsRoute,
+  });
+
+  return (
+    <BottomNavigation
+      navigationState={{ index: navIndex, routes: navRoutes }}
+      onIndexChange={setNavIndex}
+      renderScene={renderScene}
+    />
   );
 }
