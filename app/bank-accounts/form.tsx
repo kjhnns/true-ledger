@@ -58,6 +58,7 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
+          style={{ maxHeight: 300 }}
           anchor={
             <Button mode="outlined" onPress={() => setMenuVisible(true)} style={{ marginBottom: 12 }}>
               {currency}

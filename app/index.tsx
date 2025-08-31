@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { Modal, ScrollView, View, useWindowDimensions } from 'react-native';
 import { BottomNavigation, Button, DataTable, Dialog, FAB, IconButton, List, Menu, Portal, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity } from '../lib/entities';
@@ -142,6 +142,15 @@ export default function Index() {
     const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    const { width, height } = useWindowDimensions();
+    const isLandscape = width > height;
+
+    const formatRange = (start: number | null, end: number | null) => {
+      if (!start || !end) return '-';
+      const from = new Date(start).toLocaleDateString();
+      const to = new Date(end).toLocaleDateString();
+      return from === to ? from : `${from} - ${to}`;
+    };
 
     const sorted = statements.slice().sort((a, b) => b.uploadDate - a.uploadDate);
     const filtered = sorted.filter((s) =>
@@ -164,18 +173,22 @@ export default function Index() {
           <ScrollView>
             <DataTable>
               <DataTable.Header>
-                <DataTable.Title>Created</DataTable.Title>
+                {isLandscape && <DataTable.Title>Created</DataTable.Title>}
                 <DataTable.Title>Bank</DataTable.Title>
-                <DataTable.Title>File</DataTable.Title>
+                <DataTable.Title>Date Range</DataTable.Title>
                 <DataTable.Title numeric>Txns</DataTable.Title>
                 <DataTable.Title>Status</DataTable.Title>
                 <DataTable.Title>Actions</DataTable.Title>
               </DataTable.Header>
               {filtered.map((item) => (
                 <DataTable.Row key={item.id} onPress={() => router.push(`/statements/${item.id}`)}>
-                  <DataTable.Cell>{new Date(item.uploadDate).toLocaleDateString()}</DataTable.Cell>
+                  {isLandscape && (
+                    <DataTable.Cell>
+                      {new Date(item.uploadDate).toLocaleDateString()}
+                    </DataTable.Cell>
+                  )}
                   <DataTable.Cell>{item.bankLabel}</DataTable.Cell>
-                  <DataTable.Cell>{item.file ?? '-'}</DataTable.Cell>
+                  <DataTable.Cell>{formatRange(item.earliest, item.latest)}</DataTable.Cell>
                   <DataTable.Cell numeric>{item.transactionCount}</DataTable.Cell>
                   <DataTable.Cell>
                     {/* compute latest status */}

@@ -97,7 +97,7 @@ export async function listTransactions(
 export type TransactionUpdateInput = Partial<
   Pick<
     TransactionInput,
-    'recipientId' | 'senderId' | 'shared' | 'sharedAmount' | 'description'
+    'recipientId' | 'senderId' | 'shared' | 'sharedAmount' | 'description' | 'reviewedAt'
   >
 >;
 
@@ -134,6 +134,10 @@ export async function updateTransaction(
     updates.push('description=?');
     params.push(input.description ?? null);
   }
+  if (input.reviewedAt !== undefined) {
+    updates.push('reviewed_at=?');
+    params.push(input.reviewedAt ?? null);
+  }
   if (updates.length === 0) {
     return mapRow(existing);
   }
@@ -146,5 +150,18 @@ export async function updateTransaction(
     'SELECT * FROM transactions WHERE id=?',
     id
   );
+  if (input.reviewedAt !== undefined) {
+    const remaining =
+      (await db.getFirstAsync<{ count: number }>(
+        'SELECT COUNT(*) as count FROM transactions WHERE statement_id=? AND reviewed_at IS NULL',
+        row.statement_id
+      )) ?? { count: 0 };
+    await db.runAsync(
+      'UPDATE statements SET status=?, reviewed_at=? WHERE id=?',
+      remaining.count === 0 ? 'reviewed' : 'processed',
+      remaining.count === 0 ? Date.now() : null,
+      row.statement_id
+    );
+  }
   return mapRow(row);
 }

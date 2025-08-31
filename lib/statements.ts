@@ -47,6 +47,8 @@ function mapRow(row: any): Statement {
 export interface StatementMeta extends Statement {
   bankLabel: string;
   transactionCount: number;
+  earliest: number | null;
+  latest: number | null;
 }
 
 export async function createStatement(input: StatementInput): Promise<Statement> {
@@ -82,10 +84,16 @@ export async function listStatementsWithMeta(): Promise<StatementMeta[]> {
       'SELECT label FROM entities WHERE id=?',
       stmt.bankId
     );
+    const dateRow = await db.getFirstAsync<{ min: number | null; max: number | null }>(
+      'SELECT MIN(created_at) as min, MAX(created_at) as max FROM transactions WHERE statement_id=?',
+      stmt.id
+    );
     result.push({
       ...stmt,
       transactionCount: countRow?.count ?? 0,
       bankLabel: bankRow?.label ?? '',
+      earliest: dateRow?.min ?? null,
+      latest: dateRow?.max ?? null,
     });
   }
   return result;

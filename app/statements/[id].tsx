@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View, useWindowDimensions } from 'react-native';
 import {
   DataTable,
   Text,
@@ -7,6 +7,8 @@ import {
   Portal,
   Modal,
   List,
+  Checkbox,
+  useTheme,
 } from 'react-native-paper';
 import { useLocalSearchParams } from 'expo-router';
 import {
@@ -42,6 +44,9 @@ export default function StatementTransactions() {
   } | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [ascending, setAscending] = useState(false);
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const theme = useTheme();
 
   useEffect(() => {
     (async () => {
@@ -146,6 +151,16 @@ export default function StatementTransactions() {
     }
   };
 
+  const toggleReviewed = async (txn: TxnRow) => {
+    const reviewedAt = txn.reviewedAt ? null : Date.now();
+    const updated = await updateTransaction(txn.id, { reviewedAt });
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.id === txn.id ? { ...t, reviewedAt: updated.reviewedAt } : t
+      )
+    );
+  };
+
   const editSharedAmount = (txn: TxnRow) => {
     Alert.prompt(
       'Shared Amount',
@@ -168,29 +183,6 @@ export default function StatementTransactions() {
       ],
       'plain-text',
       txn.sharedAmount ? String(txn.sharedAmount) : ''
-    );
-  };
-
-  const editDescription = (txn: TxnRow) => {
-    Alert.prompt(
-      'Description',
-      'Enter description',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'OK',
-          onPress: async (text) => {
-            await updateTransaction(txn.id, { description: text });
-            setTransactions((prev) =>
-              prev.map((t) =>
-                t.id === txn.id ? { ...t, description: text } : t
-              )
-            );
-          },
-        },
-      ],
-      'plain-text',
-      txn.description ?? ''
     );
   };
 
@@ -248,7 +240,7 @@ export default function StatementTransactions() {
               </DataTable.Title>
               <DataTable.Title>Sender</DataTable.Title>
               <DataTable.Title>Recipient</DataTable.Title>
-              <DataTable.Title>Description</DataTable.Title>
+              {isLandscape && <DataTable.Title>Description</DataTable.Title>}
               <DataTable.Title
                 numeric
                 sortDirection={
@@ -265,6 +257,9 @@ export default function StatementTransactions() {
               <DataTable.Title style={{ justifyContent: 'center', width: 64 }}>
                 Shared
               </DataTable.Title>
+              <DataTable.Title style={{ justifyContent: 'center', width: 64 }}>
+                Reviewed
+              </DataTable.Title>
             </DataTable.Header>
             {sorted.map((item) => (
               <DataTable.Row key={item.id}>
@@ -275,9 +270,9 @@ export default function StatementTransactions() {
                 <DataTable.Cell onPress={() => openEntityPicker(item.id, 'recipient')}>
                   {item.recipientLabel}
                 </DataTable.Cell>
-                <DataTable.Cell onPress={() => editDescription(item)}>
-                  {item.description ?? '-'}
-                </DataTable.Cell>
+                {isLandscape && (
+                  <DataTable.Cell>{item.description ?? '-'}</DataTable.Cell>
+                )}
                 <DataTable.Cell
                   numeric
                   onPress={() => item.shared && editSharedAmount(item)}
@@ -292,6 +287,12 @@ export default function StatementTransactions() {
                     onValueChange={(v) => handleToggleShared(item, v)}
                   />
                 </DataTable.Cell>
+                <DataTable.Cell style={{ justifyContent: 'center', width: 64 }}>
+                  <Checkbox
+                    status={item.reviewedAt ? 'checked' : 'unchecked'}
+                    onPress={() => toggleReviewed(item)}
+                  />
+                </DataTable.Cell>
               </DataTable.Row>
             ))}
           </DataTable>
@@ -299,7 +300,7 @@ export default function StatementTransactions() {
       )}
       <Portal>
         <Modal visible={!!picker} onDismiss={() => setPicker(null)}>
-          <ScrollView style={{ maxHeight: 400 }}>
+          <ScrollView style={{ maxHeight: 400, backgroundColor: theme.colors.background }}>
             {(['bank', 'expense', 'income', 'savings'] as EntityCategory[]).map(
               (cat) => (
                 <List.Section key={cat} title={cat.toUpperCase()}>

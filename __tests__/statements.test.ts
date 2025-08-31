@@ -48,6 +48,8 @@ test('statement listing shows transaction count and bank label', async () => {
   const statements = await listStatementsWithMeta();
   expect(statements[0].transactionCount).toBe(2);
   expect(statements[0].bankLabel).toBe('Bank');
+  expect(statements[0].earliest).toBe(1);
+  expect(statements[0].latest).toBe(2);
 });
 
 test('reject negative transaction amount', async () => {
