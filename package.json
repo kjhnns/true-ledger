@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "deploy": "npx eas update --channel staging --message \"Staging Update\"",
+  "deploy": "eas update --channel staging --message \"Staging Update\"",
     "start": "expo start -c --tunnel",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
@@ -52,7 +52,8 @@
     "@types/react": "~19.0.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
-    "expo-doctor": "^1.17.2",
+  "expo-doctor": "^1.17.2",
+  "eas-cli": "^3.51.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
     "typescript": "~5.8.3"
