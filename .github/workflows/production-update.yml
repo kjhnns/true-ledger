@@ -1,7 +1,7 @@
 name: Staging OTA
 on:
   push:
-    branches: [ "master" ]   # or "master"
+    branches: [ "main" ]   # or "master"
 jobs:
   ota:
     runs-on: ubuntu-latest
