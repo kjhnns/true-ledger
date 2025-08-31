@@ -75,8 +75,8 @@ export default function Index() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Button title="Bank statement" onPress={() => router.push("/bank-accounts")} />
+    <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
+      <Button title="Banks" onPress={() => router.push("/bank-accounts")} />
       <Button title="Expense categories" onPress={() => router.push("/expense-categories")} />
         
         
@@ -107,7 +107,7 @@ export default function Index() {
         )}
       />
       <Modal visible={modalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
+        <View style={{ flex: 1, padding: 16, paddingTop: 100 }}>
           <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
           {banks.map((b) => (
             <Pressable
