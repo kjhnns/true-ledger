@@ -1,14 +1,6 @@
 import { useCallback, useState } from 'react';
-import {
-  Alert,
-  Button,
-  FlatList,
-  Modal,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Modal, TouchableOpacity, View } from 'react-native';
+import { Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   ExpenseCategory,
@@ -65,6 +57,7 @@ export default function ExpenseCategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [parentVisible, setParentVisible] = useState(false);
+  const theme = useTheme();
 
   const load = useCallback(async () => {
     const data = await listExpenseCategories();
@@ -145,49 +138,63 @@ export default function ExpenseCategoriesPage() {
   }: {
     item: { item: ExpenseCategory; depth: number };
   }) => (
-    <View className="flex-row items-center p-4 border-b">
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+      }}
+    >
       <TouchableOpacity
-        className="flex-1"
-        style={{ paddingLeft: item.depth * 16 }}
+        style={{ flex: 1, paddingLeft: item.depth * 16 }}
         onPress={() => handleEdit(item.item)}
       >
-        <Text className="text-base">{item.item.label}</Text>
+        <Text style={{ fontSize: 16 }}>{item.item.label}</Text>
       </TouchableOpacity>
-      <Button title="Delete" onPress={() => confirmDelete(item.item.id)} />
+      <Button onPress={() => confirmDelete(item.item.id)}>Delete</Button>
     </View>
   );
 
   return (
-    <View className="flex-1">
-      <View className="p-4 border-b">
-        <Text className="mb-1">Label</Text>
+    <View style={{ flex: 1 }}>
+      <View style={{ padding: 16, borderBottomWidth: 1 }}>
+        <Text style={{ marginBottom: 4 }}>Label</Text>
         <TextInput
+          mode="outlined"
           value={label}
           onChangeText={setLabel}
-          className="border p-2 mb-3 rounded"
+          style={{ marginBottom: 12 }}
         />
-        <Text className="mb-1">Prompt</Text>
+        <Text style={{ marginBottom: 4 }}>Prompt</Text>
         <TextInput
+          mode="outlined"
           value={prompt}
           onChangeText={setPrompt}
           multiline
-          className="border p-2 h-20 mb-3 rounded"
+          style={{ marginBottom: 12, height: 80 }}
         />
-        <Text className="mb-1">Parent</Text>
+        <Text style={{ marginBottom: 4 }}>Parent</Text>
         <TouchableOpacity
           onPress={() => setParentVisible(true)}
-          className="border p-2 mb-3 rounded"
+          style={{
+            borderWidth: 1,
+            padding: 8,
+            marginBottom: 12,
+            borderRadius: 4,
+          }}
         >
           <Text>{selectedParent ? selectedParent.label : 'None'}</Text>
         </TouchableOpacity>
-        {error ? <Text className="text-red-500 mb-3">{error}</Text> : null}
-        <Button
-          title={editingId ? 'Update Category' : 'Add Category'}
-          onPress={handleSubmit}
-        />
+        {error ? (
+          <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
+        ) : null}
+        <Button mode="contained" onPress={handleSubmit}>
+          {editingId ? 'Update Category' : 'Add Category'}
+        </Button>
         {editingId ? (
-          <View className="mt-2">
-            <Button title="Cancel" onPress={resetForm} />
+          <View style={{ marginTop: 8 }}>
+            <Button onPress={resetForm}>Cancel</Button>
           </View>
         ) : null}
       </View>
@@ -197,16 +204,19 @@ export default function ExpenseCategoriesPage() {
         renderItem={renderItem}
       />
       <Modal visible={parentVisible} transparent animationType="fade">
-        <View className="flex-1 bg-black/50 justify-center">
-          <View className="bg-white m-8 p-4 max-h-[80%]">
+        <View
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
+        >
+          <View
+            style={{ backgroundColor: 'white', margin: 32, padding: 16, maxHeight: '80%' }}
+          >
             <FlatList
               data={[{ item: null, depth: 0 }, ...parentOptions]}
               keyExtractor={(i, idx) => (i.item ? i.item.id : 'none') + idx}
               renderItem={({ item }) =>
                 item.item ? (
                   <TouchableOpacity
-                    className="p-2"
-                    style={{ paddingLeft: item.depth * 16 }}
+                    style={{ padding: 8, paddingLeft: item.depth * 16 }}
                     onPress={() => {
                       setParentId(item.item!.id);
                       setParentVisible(false);
@@ -216,7 +226,7 @@ export default function ExpenseCategoriesPage() {
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    className="p-2"
+                    style={{ padding: 8 }}
                     onPress={() => {
                       setParentId(null);
                       setParentVisible(false);
@@ -227,7 +237,7 @@ export default function ExpenseCategoriesPage() {
                 )
               }
             />
-            <Button title="Close" onPress={() => setParentVisible(false)} />
+            <Button onPress={() => setParentVisible(false)}>Close</Button>
           </View>
         </View>
       </Modal>

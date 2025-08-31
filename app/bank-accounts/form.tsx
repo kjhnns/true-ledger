@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Text, TextInput, View } from 'react-native';
+import { View } from 'react-native';
+import { Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { BankAccountInput, bankAccountSchema } from '../../lib/entities';
 import { SUPPORTED_CURRENCIES } from '../../lib/currencies';
 
@@ -16,6 +17,7 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
     initial?.currency ?? SUPPORTED_CURRENCIES[2]
   );
   const [error, setError] = useState<string>('');
+  const theme = useTheme();
 
   const handleSave = async () => {
     const input: BankAccountInput = {
@@ -33,29 +35,36 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
   };
 
   return (
-    <View className="flex-1 p-4">
-      <Text className="mb-1">Label</Text>
+    <View style={{ flex: 1, padding: 16 }}>
+      <Text style={{ marginBottom: 4 }}>Label</Text>
       <TextInput
+        mode="outlined"
         value={label}
         onChangeText={setLabel}
-        className="border p-2 mb-3 rounded"
+        style={{ marginBottom: 12 }}
       />
-      <Text className="mb-1">Prompt</Text>
+      <Text style={{ marginBottom: 4 }}>Prompt</Text>
       <TextInput
+        mode="outlined"
         value={prompt}
         onChangeText={setPrompt}
         multiline
-        className="border p-2 h-32 mb-3 rounded"
+        style={{ marginBottom: 12, height: 128 }}
       />
-      <Text className="mb-1">Currency</Text>
+      <Text style={{ marginBottom: 4 }}>Currency</Text>
       <TextInput
+        mode="outlined"
         value={currency}
         onChangeText={setCurrency}
         autoCapitalize="characters"
-        className="border p-2 mb-3 rounded"
+        style={{ marginBottom: 12 }}
       />
-      {error ? <Text className="text-red-500 mb-3">{error}</Text> : null}
-      <Button title={submitLabel} onPress={handleSave} />
+      {error ? (
+        <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
+      ) : null}
+      <Button mode="contained" onPress={handleSave}>
+        {submitLabel}
+      </Button>
     </View>
   );
 }

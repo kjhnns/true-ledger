@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Alert, Button, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, TouchableOpacity, View } from 'react-native';
+import { Button, Text } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -37,25 +38,34 @@ export default function BankAccountsList() {
   };
 
   const renderItem = ({ item }: { item: BankAccount }) => (
-    <View className="flex-row items-center p-4 border-b">
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+      }}
+    >
       <TouchableOpacity
-        className="flex-1"
+        style={{ flex: 1 }}
         onPress={() => router.push(`/bank-accounts/${item.id}`)}
       >
-        <Text className="text-base">{item.label}</Text>
+        <Text style={{ fontSize: 16 }}>{item.label}</Text>
       </TouchableOpacity>
-      <Button title="Delete" onPress={() => confirmDelete(item.id)} />
+      <Button onPress={() => confirmDelete(item.id)}>Delete</Button>
     </View>
   );
 
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       <FlatList data={accounts} keyExtractor={(i) => i.id} renderItem={renderItem} />
-      <View className="p-4">
+      <View style={{ padding: 16 }}>
         <Button
-          title="+ Add bank account"
+          mode="contained"
           onPress={() => router.push('/bank-accounts/new')}
-        />
+        >
+          + Add bank account
+        </Button>
       </View>
     </View>
   );
