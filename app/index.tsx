@@ -1,15 +1,15 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
-import { Button, DataTable, Text } from 'react-native-paper';
+import { Modal, ScrollView, View } from 'react-native';
+import { Button, DataTable, RadioButton, Text } from 'react-native-paper';
+import { loadBanksForModal } from '../lib/banks';
 import { Entity } from '../lib/entities';
 import {
   createDummyStatementWithTransactions,
   listStatementsWithMeta,
   StatementMeta,
 } from '../lib/statements';
-import { loadBanksForModal } from '../lib/banks';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -112,18 +112,14 @@ export default function Index() {
       <Modal visible={modalVisible} animationType="slide">
         <View style={{ flex: 1, padding: 16, paddingTop: 128 }}>
           <Text style={{ fontSize: 18, marginBottom: 8 }}>Select Bank</Text>
-          {banks.map((b) => (
-            <Pressable
-              key={b.id}
-              onPress={() => setSelectedBank(b.id)}
-              style={{ flexDirection: 'row', paddingVertical: 4 }}
-            >
-              <Text style={{ marginRight: 8 }}>
-                {selectedBank === b.id ? '[x]' : '[ ]'}
-              </Text>
-              <Text>{b.label}</Text>
-            </Pressable>
-          ))}
+          <RadioButton.Group
+            onValueChange={(value) => setSelectedBank(value)}
+            value={selectedBank ?? ''}
+          >
+            {banks.map((b) => (
+              <RadioButton.Item key={b.id} label={b.label} value={b.id} />
+            ))}
+          </RadioButton.Group>
           <Button onPress={pickFile}>Pick PDF</Button>
           {file && <Text style={{ marginVertical: 8 }}>{file.name}</Text>}
           <Button onPress={upload}>Upload</Button>
