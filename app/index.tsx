@@ -87,7 +87,8 @@ export default function Index() {
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-    const filtered = statements.filter((s) =>
+    const sorted = statements.slice().sort((a, b) => b.uploadDate - a.uploadDate);
+    const filtered = sorted.filter((s) =>
       viewArchived === 'archived' ? s.archivedAt !== null : s.archivedAt === null
     );
 
@@ -107,8 +108,9 @@ export default function Index() {
           <ScrollView>
             <DataTable>
               <DataTable.Header>
+                <DataTable.Title>Created</DataTable.Title>
                 <DataTable.Title>Bank</DataTable.Title>
-                <DataTable.Title>Upload Date</DataTable.Title>
+                <DataTable.Title>File</DataTable.Title>
                 <DataTable.Title numeric>Txns</DataTable.Title>
                 <DataTable.Title>Status: New</DataTable.Title>
                 <DataTable.Title>Status: Processed</DataTable.Title>
@@ -118,8 +120,9 @@ export default function Index() {
               </DataTable.Header>
               {filtered.map((item) => (
                 <DataTable.Row key={item.id} onPress={() => router.push(`/statements/${item.id}`)}>
-                  <DataTable.Cell>{item.bankLabel}</DataTable.Cell>
                   <DataTable.Cell>{new Date(item.uploadDate).toLocaleDateString()}</DataTable.Cell>
+                  <DataTable.Cell>{item.bankLabel}</DataTable.Cell>
+                  <DataTable.Cell>{item.file ?? '-'}</DataTable.Cell>
                   <DataTable.Cell numeric>{item.transactionCount}</DataTable.Cell>
                   <DataTable.Cell>
                     <MaterialCommunityIcons name={item.status === 'new' ? 'check-circle' : 'checkbox-blank-circle-outline'} size={18} color={item.status === 'new' ? 'green' : 'gray'} />
