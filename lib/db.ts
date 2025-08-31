@@ -1,14 +1,21 @@
 import * as SQLite from 'expo-sqlite';
 import { DEFAULT_EXPENSE_CATEGORIES } from './defaultCategories';
 
-const dbPromise = SQLite.openDatabaseAsync('app_v2.db');
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+function ensureDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!dbPromise) {
+    dbPromise = SQLite.openDatabaseAsync('app_v2.db');
+  }
+  return dbPromise!;
+}
 
 export async function getDb() {
-  return dbPromise;
+  return ensureDb();
 }
 
 export async function initDb() {
-  const db = await dbPromise;
+  const db = await ensureDb();
   await db.execAsync(
     `CREATE TABLE IF NOT EXISTS entities(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
