@@ -5,11 +5,11 @@ import {
   Button,
   Card,
   Checkbox,
-  IconButton,
+  FAB,
   List,
   Modal,
-  Menu,
   Portal,
+  ProgressBar,
   SegmentedButtons,
   Switch,
   Text,
@@ -23,7 +23,7 @@ import {
   listEntities,
   updateBankAccount,
 } from '../../lib/entities';
-import { getStatement } from '../../lib/statements';
+import { getStatement, reprocessStatement } from '../../lib/statements';
 import {
   listTransactions,
   Transaction,
@@ -33,6 +33,13 @@ import {
 } from '../../lib/transactions';
 import { getDefaultSharedPercent } from '../../lib/settings';
 import LearnModal, { LearnTxn } from '../LearnModal';
+import * as SecureStore from 'expo-secure-store';
+import {
+  OPENAI_KEY_STORAGE_KEY,
+  SYSTEM_PROMPT_STORAGE_KEY,
+  DEFAULT_SYSTEM_PROMPT,
+  processStatementFile,
+} from '../../lib/openai';
 
 interface TxnRow extends Transaction {
   senderLabel: string;
@@ -55,6 +62,7 @@ export default function StatementTransactions() {
     bankPrompt: string;
     currency: string;
     count: number;
+    externalFileId: string | null;
   } | null>(null);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [promptModal, setPromptModal] = useState(false);
@@ -62,11 +70,116 @@ export default function StatementTransactions() {
   const [defaultPercent, setDefaultPercent] = useState(50);
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [ascending, setAscending] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
   const [learnVisible, setLearnVisible] = useState(false);
+  const [processingVisible, setProcessingVisible] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingLog, setProcessingLog] = useState('');
+  const [processingDone, setProcessingDone] = useState(false);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const theme = useTheme();
+
+  const getLabelWithParent = async (id: string | null) => {
+    if (!id) return '';
+    const ent = await getEntity(id);
+    if (!ent) return '';
+    if (ent.parentId) {
+      const parent = await getEntity(ent.parentId);
+      return parent ? `${parent.label} - ${ent.label}` : ent.label;
+    }
+    return ent.label;
+  };
+
+  const formatLabelLocal = (entityId: string) => {
+    const ent = entities.find((e) => e.id === entityId);
+    if (!ent) return '';
+    if (ent.parentId) {
+      const parent = entities.find((e) => e.id === ent.parentId);
+      return parent ? `${parent.label} - ${ent.label}` : ent.label;
+    }
+    return ent.label;
+  };
+
+  const handleMarkAllReviewed = async () => {
+    if (!id) return;
+    await markAllTransactionsReviewed(id);
+    const now = Date.now();
+    setTransactions((prev) => prev.map((t) => ({ ...t, reviewedAt: now })));
+    setReviewedCount(meta ? meta.count : transactions.length);
+  };
+
+  const openBankPrompt = () => {
+    if (!meta) return;
+    setPromptEdit(meta.bankPrompt);
+    setPromptModal(true);
+  };
+
+  const handleReprocess = () => {
+    if (!id || !meta) return;
+    Alert.alert('Reprocess statement', 'Existing transactions will be dropped. Continue?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'OK',
+        onPress: async () => {
+          await reprocessStatement(id);
+          const apiKey = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
+          const sysPrompt =
+            (await SecureStore.getItemAsync(SYSTEM_PROMPT_STORAGE_KEY)) ??
+            DEFAULT_SYSTEM_PROMPT;
+          if (!apiKey) {
+            Alert.alert('Missing API key');
+            return;
+          }
+          setProcessingVisible(true);
+          setProcessingProgress(0);
+          setProcessingLog('');
+          setProcessingDone(false);
+          try {
+            await processStatementFile({
+              statementId: id,
+              bankId: meta.bankId,
+              fileId: meta.externalFileId || undefined,
+              apiKey: apiKey || '',
+              systemPrompt: sysPrompt,
+              onProgress: (p) => setProcessingProgress(p),
+            });
+            setProcessingLog((l) => l + 'done\n');
+            setProcessingDone(true);
+            const [stmt, list] = await Promise.all([
+              getStatement(id),
+              listTransactions(id),
+            ]);
+            const enriched: TxnRow[] = [];
+            for (const t of list) {
+              const recipientLabel = await getLabelWithParent(t.recipientId);
+              const senderLabel = await getLabelWithParent(t.senderId);
+              enriched.push({ ...t, recipientLabel, senderLabel });
+            }
+            setTransactions(enriched);
+            setReviewedCount(list.filter((t) => t.reviewedAt).length);
+            if (stmt) {
+              const dates = list.map((t) => t.createdAt);
+              setMeta({
+                uploadDate: stmt.uploadDate,
+                earliest: Math.min(...dates),
+                latest: Math.max(...dates),
+                bank: meta.bank,
+                bankId: meta.bankId,
+                bankPrompt: meta.bankPrompt,
+                currency: meta.currency,
+                count: list.length,
+                externalFileId: stmt.externalFileId ?? null,
+              });
+            }
+          } catch (e: any) {
+            setProcessingLog((l) => l + `error: ${e.message || e}\n`);
+            setProcessingDone(true);
+          }
+        },
+      },
+    ]);
+  };
 
   useEffect(() => {
     (async () => {
@@ -78,14 +191,12 @@ export default function StatementTransactions() {
       ]);
       const enriched: TxnRow[] = [];
       for (const t of list) {
-        const recipient = t.recipientId
-          ? await getEntity(t.recipientId)
-          : null;
-        const sender = t.senderId ? await getEntity(t.senderId) : null;
+        const recipientLabel = await getLabelWithParent(t.recipientId);
+        const senderLabel = await getLabelWithParent(t.senderId);
         enriched.push({
           ...t,
-          recipientLabel: recipient?.label ?? '',
-          senderLabel: sender?.label ?? '',
+          recipientLabel,
+          senderLabel,
         });
       }
       setTransactions(enriched);
@@ -103,6 +214,7 @@ export default function StatementTransactions() {
           bankPrompt: bank?.prompt ?? '',
           currency: bank?.currency ?? '',
           count: list.length,
+          externalFileId: stmt.externalFileId ?? null,
         });
       }
     })();
@@ -195,7 +307,7 @@ export default function StatementTransactions() {
     if (!picker) return;
     const field = picker.field === 'sender' ? { senderId: entityId } : { recipientId: entityId };
     await updateTransaction(picker.txnId, field);
-    const label = entities.find((e) => e.id === entityId)?.label ?? '';
+    const label = formatLabelLocal(entityId);
     setTransactions((prev) =>
       prev.map((t) =>
         t.id === picker.txnId
@@ -219,15 +331,6 @@ export default function StatementTransactions() {
         <View style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1 }}>
-              <Text
-                onPress={() => {
-                  setPromptEdit(meta.bankPrompt);
-                  setPromptModal(true);
-                }}
-                style={{ color: 'blue' }}
-              >
-                Bank: {meta.bank} ({meta.currency})
-              </Text>
               <Text>Uploaded: {formatDate(meta.uploadDate)}</Text>
               <Text>
                 Date Range: {formatDate(meta.earliest)} - {formatDate(meta.latest)}
@@ -252,48 +355,15 @@ export default function StatementTransactions() {
         <Text>No transactions</Text>
       ) : (
         <ScrollView>
-          <View style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ flex: 1 }}>
-              <SegmentedButtons
-                value={sortBy}
-                onValueChange={(v) => toggleSort(v as 'date' | 'amount')}
-                buttons={[
-                  { value: 'date', label: 'Date' },
-                  { value: 'amount', label: 'Amount' },
-                ]}
-              />
-            </View>
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <IconButton
-                  icon="dots-vertical"
-                  onPress={() => setMenuVisible(true)}
-                  accessibilityLabel="Options"
-                />
-              }
-            >
-              <Menu.Item
-                onPress={async () => {
-                  setMenuVisible(false);
-                  if (id) {
-                    await markAllTransactionsReviewed(id);
-                    const now = Date.now();
-                    setTransactions((prev) => prev.map((t) => ({ ...t, reviewedAt: now })));
-                    setReviewedCount(meta ? meta.count : transactions.length);
-                  }
-                }}
-                title="Mark all reviewed"
-              />
-              <Menu.Item
-                onPress={() => {
-                  setMenuVisible(false);
-                  setLearnVisible(true);
-                }}
-                title="Learn mode"
-              />
-            </Menu>
+          <View style={{ marginBottom: 12 }}>
+            <SegmentedButtons
+              value={sortBy}
+              onValueChange={(v) => toggleSort(v as 'date' | 'amount')}
+              buttons={[
+                { value: 'date', label: 'Date' },
+                { value: 'amount', label: 'Amount' },
+              ]}
+            />
           </View>
           <ScrollView>
             {sorted.map((item) => {
@@ -362,6 +432,18 @@ export default function StatementTransactions() {
             setMeta((m) => m ? { ...m, bankPrompt: promptEdit } : m);
             setPromptModal(false);
           }}>Save</Button>
+        </Modal>
+        <Modal
+          visible={processingVisible}
+          dismissable={false}
+          contentContainerStyle={{ backgroundColor: theme.colors.background, padding: 12, margin: 20, borderRadius: 12 }}
+        >
+          <Text style={{ marginBottom: 8 }}>Reprocessing</Text>
+          <ProgressBar progress={processingProgress} style={{ marginBottom: 8 }} />
+          <ScrollView style={{ maxHeight: 200, marginBottom: 8 }}>
+            <Text selectable style={{ fontFamily: 'monospace', fontSize: 12 }}>{processingLog}</Text>
+          </ScrollView>
+          <Button onPress={() => setProcessingVisible(false)} disabled={!processingDone}>Close</Button>
         </Modal>
         <Modal
           visible={!!editing}
@@ -510,6 +592,45 @@ export default function StatementTransactions() {
             )}
           </ScrollView>
         </Modal>
+        <FAB.Group
+          open={fabOpen}
+          onStateChange={({ open }) => setFabOpen(open)}
+          icon={fabOpen ? 'close' : 'menu'}
+          actions={[
+            {
+              icon: 'pencil',
+              label: 'Edit bank prompt',
+              onPress: () => {
+                setFabOpen(false);
+                openBankPrompt();
+              },
+            },
+            {
+              icon: 'refresh',
+              label: 'Reprocess',
+              onPress: () => {
+                setFabOpen(false);
+                handleReprocess();
+              },
+            },
+            {
+              icon: 'check-all',
+              label: 'Mark reviewed',
+              onPress: () => {
+                setFabOpen(false);
+                handleMarkAllReviewed();
+              },
+            },
+            {
+              icon: 'book',
+              label: 'Learn mode',
+              onPress: () => {
+                setFabOpen(false);
+                setLearnVisible(true);
+              },
+            },
+          ]}
+        />
       </Portal>
     </View>
   );

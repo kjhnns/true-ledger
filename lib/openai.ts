@@ -41,7 +41,11 @@ export const DEFAULT_SYSTEM_PROMPT = `You are a precise financial data parser. E
     }
   ]
 }
-`;
+  `;
+
+export const LEARN_PROMPT_STORAGE_KEY = 'learn_prompt';
+export const DEFAULT_LEARN_PROMPT =
+  'Concise and without any formatting. update the following prompt for a bank transaction parsing service so that the following mappings are learned as the golden data.';
 
 async function uploadFile(apiKey: string, file: any, signal?: AbortSignal, onLog?: (m: string) => void): Promise<string> {
   // Use the installed OpenAI SDK (imported at module top). If the provided
@@ -403,6 +407,7 @@ export async function processStatementFile(options: {
 
 export async function learnFromTransactions(options: {
   bankPrompt: string;
+  basePrompt?: string;
   transactions: {
     description: string | null;
     amount: number;
@@ -415,7 +420,8 @@ export async function learnFromTransactions(options: {
   onLog?: (m: string) => void;
   signal?: AbortSignal;
 }): Promise<string> {
-  const { bankPrompt, transactions, apiKey, onProgress, onLog, signal } = options;
+  const { bankPrompt, basePrompt, transactions, apiKey, onProgress, onLog, signal } = options;
+  const learnPrompt = basePrompt ?? DEFAULT_LEARN_PROMPT;
   if (!apiKey) throw new Error('missing api key');
   onProgress?.(0);
   onLog?.('building prompt');
@@ -423,11 +429,7 @@ export async function learnFromTransactions(options: {
   const txLines = transactions.map((t, i) =>
     `Txn ${i + 1}: description="${t.description ?? ''}" amount=${t.amount} shared=${t.shared} category="${t.category ?? ''}" type=${t.type}`
   );
-  const prompt = [
-    'update the following prompt for a bank transaction parsing service so that the following mappings are correctly applied to these transactions in future jobs',
-    bankPrompt,
-    ...txLines,
-  ].join('\n');
+  const prompt = [learnPrompt, bankPrompt, ...txLines].join('\n');
   onProgress?.(0.25);
   onLog?.('prompt built; initializing OpenAI client');
   console.log('learnFromTransactions: prompt built');

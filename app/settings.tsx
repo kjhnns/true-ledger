@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, ScrollView, View, Keyboard } from "react-native";
 import {
   Button,
   Divider,
@@ -9,7 +9,13 @@ import {
 } from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
-import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, SYSTEM_PROMPT_STORAGE_KEY } from "../lib/openai";
+import {
+  DEFAULT_SYSTEM_PROMPT,
+  DEFAULT_LEARN_PROMPT,
+  OPENAI_KEY_STORAGE_KEY,
+  SYSTEM_PROMPT_STORAGE_KEY,
+  LEARN_PROMPT_STORAGE_KEY,
+} from "../lib/openai";
 import { DEFAULT_SHARED_PERCENT, getDefaultSharedPercent, setDefaultSharedPercent } from "../lib/settings";
 
 const UPDATED_AT_KEY = "openai_api_key_updated_at";
@@ -56,6 +62,7 @@ export default function Settings() {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [learnPrompt, setLearnPrompt] = useState("");
   const [sharedPercent, setSharedPercent] = useState<number>(DEFAULT_SHARED_PERCENT);
   const theme = useTheme();
 
@@ -66,10 +73,14 @@ export default function Settings() {
       const storedPrompt = await SecureStore.getItemAsync(
         SYSTEM_PROMPT_STORAGE_KEY
       );
+      const storedLearnPrompt = await SecureStore.getItemAsync(
+        LEARN_PROMPT_STORAGE_KEY
+      );
       const percent = await getDefaultSharedPercent();
       setHasKey(!!existing);
       setUpdatedAt(updated);
       setPrompt(storedPrompt ?? DEFAULT_SYSTEM_PROMPT);
+      setLearnPrompt(storedLearnPrompt ?? DEFAULT_LEARN_PROMPT);
       setSharedPercent(percent);
     })();
   }, []);
@@ -110,11 +121,12 @@ const handleRemove = () => {
     ]);
 };
 
-const handlePromptSave = async () => {
-  await SecureStore.setItemAsync(SYSTEM_PROMPT_STORAGE_KEY, prompt);
-  await setDefaultSharedPercent(sharedPercent);
-  Alert.alert('Settings saved.');
-};
+  const handlePromptSave = async () => {
+    await SecureStore.setItemAsync(SYSTEM_PROMPT_STORAGE_KEY, prompt);
+    await SecureStore.setItemAsync(LEARN_PROMPT_STORAGE_KEY, learnPrompt);
+    await setDefaultSharedPercent(sharedPercent);
+    Alert.alert('Settings saved.');
+  };
 
   const renderKeySection = () => {
     if (!hasKey || editing) {
@@ -175,6 +187,20 @@ const handlePromptSave = async () => {
         multiline
         value={prompt}
         onChangeText={setPrompt}
+        style={{ marginBottom: 8 }}
+      />
+      <Button onPress={() => Keyboard.dismiss()} style={{ marginBottom: 8 }}>
+        Dismiss keyboard
+      </Button>
+      <Divider style={{ marginVertical: 16 }} />
+      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+        Learn mode prompt
+      </Text>
+      <TextInput
+        mode="outlined"
+        multiline
+        value={learnPrompt}
+        onChangeText={setLearnPrompt}
         style={{ marginBottom: 8 }}
       />
       <Divider style={{ marginVertical: 16 }} />
