@@ -29,6 +29,11 @@ export const sqliteMock = {
           .filter((t) => t.statement_id === param)
           .sort((a, b) => b.created_at - a.created_at);
       }
+      if (sql.startsWith('SELECT * FROM transactions')) {
+        return [...tables.transactions].sort(
+          (a, b) => b.created_at - a.created_at
+        );
+      }
       return [];
     },
     getFirstAsync: async (sql: string, param?: any) => {
