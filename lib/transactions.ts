@@ -180,3 +180,20 @@ export async function updateTransaction(
   }
   return mapRow(row);
 }
+
+export async function markAllTransactionsReviewed(statementId: string): Promise<void> {
+  const db = await getDb();
+  const now = Date.now();
+  const list = await listTransactions(statementId);
+  for (const t of list) {
+    if (!t.reviewedAt) {
+      await db.runAsync('UPDATE transactions SET reviewed_at=? WHERE id=?', now, t.id);
+    }
+  }
+  await db.runAsync(
+    'UPDATE statements SET status=?, reviewed_at=? WHERE id=?',
+    'reviewed',
+    now,
+    statementId
+  );
+}

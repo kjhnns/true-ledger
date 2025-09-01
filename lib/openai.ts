@@ -401,3 +401,50 @@ export async function processStatementFile(options: {
   }
 }
 
+export async function learnFromTransactions(options: {
+  bankPrompt: string;
+  transactions: {
+    description: string | null;
+    amount: number;
+    shared: boolean;
+    category: string | null;
+    type: 'debit' | 'credit';
+  }[];
+  apiKey: string;
+  onProgress?: (p: number) => void;
+  onLog?: (m: string) => void;
+  signal?: AbortSignal;
+}): Promise<string> {
+  const { bankPrompt, transactions, apiKey, onProgress, onLog, signal } = options;
+  if (!apiKey) throw new Error('missing api key');
+  onProgress?.(0);
+  onLog?.('building prompt');
+  const txLines = transactions.map((t, i) =>
+    `Txn ${i + 1}: description="${t.description ?? ''}" amount=${t.amount} shared=${t.shared} category="${t.category ?? ''}" type=${t.type}`
+  );
+  const prompt = [
+    'update the following prompt for a bank transaction parsing service so that the following mappings are correctly applied to these transactions in future jobs',
+    bankPrompt,
+    ...txLines,
+  ].join('\n');
+  onProgress?.(0.25);
+  onLog?.('creating response');
+  const res = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model: 'gpt-4o-mini', input: prompt }),
+    signal,
+  });
+  if (!res.ok) throw new Error('response creation failed');
+  const json = await res.json();
+  onProgress?.(0.75);
+  onLog?.('response received');
+  const output = json.output_text || '';
+  onProgress?.(1);
+  onLog?.('done');
+  return output;
+}
+
