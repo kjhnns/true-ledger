@@ -1,14 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import { Modal, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, List, Menu, Portal, RadioButton, Snackbar, Text, ProgressBar } from 'react-native-paper';
+import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, List, Menu, Portal, ProgressBar, RadioButton, Snackbar, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
+import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, processStatementFile, SYSTEM_PROMPT_STORAGE_KEY } from '../lib/openai';
 import { archiveStatement, createStatement, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
-import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, SYSTEM_PROMPT_STORAGE_KEY, processStatementFile } from '../lib/openai';
-import * as SecureStore from 'expo-secure-store';
 import Settings from './settings';
 
 function StatusRow({ item }: { item: StatementMeta }) {
@@ -198,6 +198,13 @@ export default function Index() {
       return from === to ? from : `${from} - ${to}`;
     };
 
+    const getStatusLabel = (s: StatementMeta) => {
+      if (s.publishedAt) return 'Published';
+      if (s.reviewedAt) return 'Reviewed';
+      if (s.processedAt) return 'Processed';
+      return 'New';
+    };
+
     const sorted = statements.slice().sort((a, b) => b.uploadDate - a.uploadDate);
     const filtered = sorted
       .filter((s) => (viewArchived === 'archived' ? s.archivedAt !== null : s.archivedAt === null))
@@ -254,11 +261,12 @@ export default function Index() {
                             <Text style={{ fontWeight: '700' }}>{formatRange(item.earliest, item.latest)}</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
                               <Chip mode="outlined" style={{ marginRight: 8 }}>{item.bankLabel}</Chip>
+                              <Chip mode="outlined" style={{ marginRight: 8 }}>{getStatusLabel(item)}</Chip>
                               <Text style={{ color: 'gray' }}>{new Date(item.uploadDate).toLocaleDateString()}</Text>
                             </View>
                           </TouchableOpacity>
                           <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
-                            <Text>{item.transactionCount} txns</Text>
+                            <Text>{item.transactionCount} records</Text>
                             <View style={{ marginTop: 8 }}>
                               <ActionMenu item={item} viewArchived={viewArchived} onRequestDelete={(id) => { setDeleteTarget(id); setConfirmVisible(true); }} refresh={refreshStatements} />
                             </View>
