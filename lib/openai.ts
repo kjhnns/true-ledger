@@ -419,6 +419,7 @@ export async function learnFromTransactions(options: {
   if (!apiKey) throw new Error('missing api key');
   onProgress?.(0);
   onLog?.('building prompt');
+  console.log('learnFromTransactions: building prompt');
   const txLines = transactions.map((t, i) =>
     `Txn ${i + 1}: description="${t.description ?? ''}" amount=${t.amount} shared=${t.shared} category="${t.category ?? ''}" type=${t.type}`
   );
@@ -428,20 +429,23 @@ export async function learnFromTransactions(options: {
     ...txLines,
   ].join('\n');
   onProgress?.(0.25);
-  onLog?.('creating response');
-  const res = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ model: 'gpt-4o-mini', input: prompt }),
-    signal,
-  });
-  if (!res.ok) throw new Error('response creation failed');
-  const json = await res.json();
-  onProgress?.(0.75);
-  onLog?.('response received');
+  onLog?.('prompt built; initializing OpenAI client');
+  console.log('learnFromTransactions: prompt built');
+  const client = new OpenAI({ apiKey });
+  onLog?.('sending prompt via OpenAI SDK');
+  console.log('learnFromTransactions: sending prompt');
+  let json: any;
+  try {
+    const res = await client.responses.create({ model: 'gpt-4o-mini', input: prompt }, { signal });
+    json = res;
+    onProgress?.(0.75);
+    onLog?.('response received from OpenAI');
+    console.log('learnFromTransactions: response received');
+  } catch (err) {
+    console.log('learnFromTransactions: OpenAI request failed', err);
+    onLog?.('OpenAI request failed');
+    throw err;
+  }
   const output = (json.output_text || '').trim();
   onProgress?.(1);
   onLog?.('done');
