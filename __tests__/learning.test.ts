@@ -31,5 +31,14 @@ describe('learnFromTransactions', () => {
       learnFromTransactions({ bankPrompt: '', transactions: [], apiKey: 'sk' })
     ).rejects.toThrow();
   });
+
+  it('throws when API returns empty prompt', async () => {
+    const fakeFetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ output_text: '' }) });
+    // @ts-ignore
+    global.fetch = fakeFetch;
+    await expect(
+      learnFromTransactions({ bankPrompt: 'old', transactions: [], apiKey: 'sk' })
+    ).rejects.toThrow('empty prompt');
+  });
 });
 

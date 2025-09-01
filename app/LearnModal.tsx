@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, View, TouchableOpacity } from 'react-native';
 import { Button, Checkbox, Modal, Portal, ProgressBar, Text } from 'react-native-paper';
 import * as SecureStore from 'expo-secure-store';
@@ -31,6 +31,20 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
   const [log, setLog] = useState('');
   const [controller, setController] = useState<AbortController | null>(null);
   const [completed, setCompleted] = useState(false);
+
+  const reset = () => {
+    controller?.abort();
+    setScreen('select');
+    setSelected(new Set());
+    setProgress(0);
+    setLog('');
+    setController(null);
+    setCompleted(false);
+  };
+
+  useEffect(() => {
+    if (!visible) reset();
+  }, [visible]);
 
   const nf = new Intl.NumberFormat(undefined, { style: 'currency', currency: bank.currency || 'USD' });
 
