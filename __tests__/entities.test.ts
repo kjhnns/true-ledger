@@ -11,6 +11,8 @@ import {
   updateExpenseCategory,
   deleteExpenseCategory,
   listExpenseCategories,
+  createEntity,
+  deleteEntity,
 } from '../lib/entities';
 import { initDb } from '../lib/db';
 const sqlite = require('expo-sqlite');
@@ -24,6 +26,13 @@ test('seeds default expense categories', async () => {
   const expenses = await listEntities('expense');
   expect(expenses.find((c) => c.label === 'Food')).toBeTruthy();
   expect(expenses.find((c) => c.label === 'Groceries')).toBeTruthy();
+});
+
+test('seeds default income and savings categories', async () => {
+  const incomes = await listEntities('income');
+  const savings = await listEntities('savings');
+  expect(incomes.find((c) => c.label === 'Salary')).toBeTruthy();
+  expect(savings.find((c) => c.label === 'General')).toBeTruthy();
 });
 
 test('create, update, delete bank account', async () => {
@@ -46,6 +55,21 @@ test('create, update, delete bank account', async () => {
   await deleteBankAccount(created.id);
   const list = await listBankAccounts();
   expect(list.length).toBe(0);
+});
+
+test('create and delete income category', async () => {
+  const item = await createEntity({
+    label: 'Bonus',
+    category: 'income',
+    prompt: 'Bonus',
+    parentId: null,
+    currency: 'USD',
+  });
+  let list = await listEntities('income');
+  expect(list.find((c) => c.id === item.id)).toBeTruthy();
+  await deleteEntity(item.id);
+  list = await listEntities('income');
+  expect(list.find((c) => c.id === item.id)).toBeFalsy();
 });
 
 test('reject invalid currency', async () => {

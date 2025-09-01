@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { DEFAULT_EXPENSE_CATEGORIES } from './defaultCategories';
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, DEFAULT_SAVINGS_CATEGORIES } from './defaultCategories';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -63,34 +63,74 @@ export async function initDb() {
 }
 
 async function seedDefaultCategories(db: SQLite.SQLiteDatabase) {
-  const existing = await db.getFirstAsync<{ count: number }>(
+  const now = Date.now();
+
+  const expenseExisting = await db.getFirstAsync<{ count: number }>(
     'SELECT COUNT(*) as count FROM entities WHERE category=?',
     'expense'
   );
-  if (existing && existing.count > 0) return;
-  const now = Date.now();
-  for (const cat of DEFAULT_EXPENSE_CATEGORIES) {
-    await db.runAsync(
-      'INSERT INTO entities (label, category, prompt, parent_id, currency, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
-      cat.label,
-      'expense',
-      cat.label,
-      null,
-      'USD',
-      now,
-      now
-    );
-    const parent = await db.getFirstAsync<any>(
-      'SELECT id FROM entities WHERE rowid = last_insert_rowid()'
-    );
-    const parentId = parent.id;
-    for (const child of cat.children ?? []) {
+  if (!expenseExisting || expenseExisting.count === 0) {
+    for (const cat of DEFAULT_EXPENSE_CATEGORIES) {
       await db.runAsync(
         'INSERT INTO entities (label, category, prompt, parent_id, currency, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
-        child.label,
+        cat.label,
         'expense',
-        child.label,
-        parentId,
+        cat.label,
+        null,
+        'USD',
+        now,
+        now
+      );
+      const parent = await db.getFirstAsync<any>(
+        'SELECT id FROM entities WHERE rowid = last_insert_rowid()'
+      );
+      const parentId = parent.id;
+      for (const child of cat.children ?? []) {
+        await db.runAsync(
+          'INSERT INTO entities (label, category, prompt, parent_id, currency, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
+          child.label,
+          'expense',
+          child.label,
+          parentId,
+          'USD',
+          now,
+          now
+        );
+      }
+    }
+  }
+
+  const incomeExisting = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM entities WHERE category=?',
+    'income'
+  );
+  if (!incomeExisting || incomeExisting.count === 0) {
+    for (const label of DEFAULT_INCOME_CATEGORIES) {
+      await db.runAsync(
+        'INSERT INTO entities (label, category, prompt, parent_id, currency, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
+        label,
+        'income',
+        label,
+        null,
+        'USD',
+        now,
+        now
+      );
+    }
+  }
+
+  const savingsExisting = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM entities WHERE category=?',
+    'savings'
+  );
+  if (!savingsExisting || savingsExisting.count === 0) {
+    for (const label of DEFAULT_SAVINGS_CATEGORIES) {
+      await db.runAsync(
+        'INSERT INTO entities (label, category, prompt, parent_id, currency, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
+        label,
+        'savings',
+        label,
+        null,
         'USD',
         now,
         now

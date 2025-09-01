@@ -96,3 +96,18 @@ export const DEFAULT_EXPENSE_CATEGORIES: CategorySeed[] = [
   },
 ];
 
+export const DEFAULT_INCOME_CATEGORIES = [
+  'Salary',
+  'Refunds',
+  'Sale',
+  'Gift',
+  'Invoices',
+  'Other',
+];
+
+export const DEFAULT_SAVINGS_CATEGORIES = [
+  'General',
+  'Investments',
+  'Other',
+];
+
