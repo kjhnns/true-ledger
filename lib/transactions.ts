@@ -96,8 +96,8 @@ export async function listTransactions(
 
 export type TransactionUpdateInput = Partial<
   Pick<
-    TransactionInput,
-    'recipientId' | 'senderId' | 'shared' | 'sharedAmount' | 'description' | 'reviewedAt'
+  TransactionInput,
+  'recipientId' | 'senderId' | 'shared' | 'sharedAmount' | 'description' | 'reviewedAt' | 'createdAt'
   >
 >;
 
@@ -137,6 +137,10 @@ export async function updateTransaction(
   if (input.reviewedAt !== undefined) {
     updates.push('reviewed_at=?');
     params.push(input.reviewedAt ?? null);
+  }
+  if (input.createdAt !== undefined) {
+    updates.push('created_at=?');
+    params.push(input.createdAt);
   }
   if (updates.length === 0) {
     return mapRow(existing);
