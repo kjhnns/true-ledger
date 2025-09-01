@@ -16,7 +16,14 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "SEND",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [{ "mimeType": "application/pdf" }]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
