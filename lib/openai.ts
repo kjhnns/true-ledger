@@ -442,9 +442,10 @@ export async function learnFromTransactions(options: {
   const json = await res.json();
   onProgress?.(0.75);
   onLog?.('response received');
-  const output = json.output_text || '';
+  const output = (json.output_text || '').trim();
   onProgress?.(1);
   onLog?.('done');
+  if (!output) throw new Error('empty prompt');
   return output;
 }
 
