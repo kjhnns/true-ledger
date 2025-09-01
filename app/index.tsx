@@ -13,6 +13,7 @@ import { archiveStatement, createStatement, deleteStatement, listStatementsWithM
 import { fileFromShareUrl } from '../lib/share';
 import Settings from './settings';
 import UploadModal from './UploadModal';
+import Analysis from './analysis';
 import { useFocusEffect } from '@react-navigation/native';
 
 function StatusRow({ item }: { item: StatementMeta }) {
@@ -99,7 +100,8 @@ export default function Index() {
   const router = useRouter();
   const [navIndex, setNavIndex] = useState(0);
   const [navRoutes] = useState([
-    { key: 'statements', title: 'Statements', icon: 'file-document' },
+    { key: 'import', title: 'Import', icon: 'file-import' },
+    { key: 'analysis', title: 'Analysis', icon: 'chart-bar' },
     { key: 'settings', title: 'Settings', icon: 'cog' },
   ]);
   const [statements, setStatements] = useState<StatementMeta[]>([]);
@@ -237,7 +239,7 @@ export default function Index() {
     return () => sub.remove();
   }, []);
 
-  const StatementsRoute = () => {
+  const ImportRoute = () => {
   const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -498,8 +500,15 @@ export default function Index() {
     </View>
   );
 
+  const AnalysisRoute = () => (
+    <View style={{ flex: 1 }}>
+      <Analysis />
+    </View>
+  );
+
   const renderScene = BottomNavigation.SceneMap({
-    statements: StatementsRoute,
+    import: ImportRoute,
+    analysis: AnalysisRoute,
     settings: SettingsRoute,
   });
 
