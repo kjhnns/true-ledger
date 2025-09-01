@@ -37,7 +37,7 @@ export const DEFAULT_SYSTEM_PROMPT = `You are a precise financial data parser. E
 }
 `;
 
-async function uploadFile(apiKey: string, file: any, signal?: AbortSignal): Promise<string> {
+async function uploadFile(apiKey: string, file: any, signal?: AbortSignal, onLog?: (m: string) => void): Promise<string> {
   // Use the installed OpenAI SDK (imported at module top). If the provided
   // file is a browser Blob (common in tests) we skip the SDK upload and use
   // the HTTP fallback which tests mock.
@@ -46,6 +46,7 @@ async function uploadFile(apiKey: string, file: any, signal?: AbortSignal): Prom
   // upload path and use the HTTP fallback which the tests mock.
   if (typeof Blob !== 'undefined' && file instanceof Blob) {
     console.log('uploadFile: detected Blob input, using HTTP upload');
+    onLog?.('uploadFile: detected blob, using HTTP upload');
     const form = new FormData();
     form.append('purpose', 'assistants');
     form.append('file', file);
@@ -55,9 +56,10 @@ async function uploadFile(apiKey: string, file: any, signal?: AbortSignal): Prom
       body: form,
       signal,
     });
-    if (!res.ok) throw new Error('file upload failed');
+  if (!res.ok) throw new Error('file upload failed');
     const json = await res.json();
-    return json.id as string;
+  onLog?.(`uploadFile: uploaded (id:${json.id})`);
+  return json.id as string;
   }
 
   // The caller should provide a file object compatible with the environment
@@ -65,13 +67,16 @@ async function uploadFile(apiKey: string, file: any, signal?: AbortSignal): Prom
   // fails (for example in the test environment where `file` is a stub),
   // fall back to the HTTP fetch upload used by tests.
     try {
-    console.log('uploadFile: attempting SDK file upload');
+  console.log('uploadFile: attempting SDK file upload');
+  onLog?.('uploadFile: attempting SDK upload');
     if (signal?.aborted) throw new Error('aborted');
     const res: any = await client.files.create({ file, purpose: 'assistants' } as any);
-    console.log('uploadFile: SDK upload succeeded, file id', res.id);
-    return res.id as string;
+  console.log('uploadFile: SDK upload succeeded, file id', res.id);
+  onLog?.(`uploadFile: uploaded (id:${res.id})`);
+  return res.id as string;
   } catch (sdkErr) {
-    console.log('uploadFile: SDK upload failed, falling back to HTTP upload', sdkErr);
+  console.log('uploadFile: SDK upload failed, falling back to HTTP upload', sdkErr);
+  onLog?.('uploadFile: SDK upload failed, falling back to HTTP');
     const form = new FormData();
     form.append('purpose', 'assistants');
     form.append('file', file);
@@ -81,13 +86,14 @@ async function uploadFile(apiKey: string, file: any, signal?: AbortSignal): Prom
       body: form,
       signal,
     });
-    if (!res.ok) throw new Error('file upload failed');
-    const json = await res.json();
-    return json.id as string;
+  if (!res.ok) throw new Error('file upload failed');
+  const json = await res.json();
+  onLog?.(`uploadFile: uploaded (id:${json.id})`);
+  return json.id as string;
   }
 }
 
-async function createThread(apiKey: string, fileId: string, prompt: string, signal?: AbortSignal) {
+async function createThread(apiKey: string, fileId: string, prompt: string, signal?: AbortSignal, onLog?: (m: string) => void) {
   // Helper to perform the HTTP fallback create/run used by tests.
   async function httpCreateThread() {
     const createRes = await fetch('https://api.openai.com/v1/threads', {
@@ -105,11 +111,12 @@ async function createThread(apiKey: string, fileId: string, prompt: string, sign
   // signal passed from outer scope if provided
       signal,
     });
-    if (!createRes.ok) throw new Error('thread creation failed');
+  if (!createRes.ok) throw new Error('thread creation failed');
     const thread = await createRes.json();
     // In tests the mocked response may already return the parsed transactions
     // object. If so, return it directly.
     if (thread && thread.transactions) {
+      onLog?.('createThread: received transactions from HTTP fallback');
       return thread;
     }
     const runRes = await fetch(`https://api.openai.com/v1/threads/${thread.id}/run`, {
@@ -118,8 +125,9 @@ async function createThread(apiKey: string, fileId: string, prompt: string, sign
       body: JSON.stringify({}),
       signal,
     });
-    if (!runRes.ok) throw new Error('thread run failed');
+  if (!runRes.ok) throw new Error('thread run failed');
     const runJson = await runRes.json();
+  onLog?.('createThread: run completed (HTTP)');
     return runJson;
   }
 
@@ -129,16 +137,20 @@ async function createThread(apiKey: string, fileId: string, prompt: string, sign
   // consuming mocked fetch responses.
   if (typeof global !== 'undefined' && (global as any).fetch && (global as any).fetch.mock) {
     console.log('createThread: detected mocked fetch, using HTTP fallback');
+    onLog?.('createThread: using HTTP fallback (mocked fetch)');
     return httpCreateThread();
   }
   try {
     console.log('createThread: using OpenAI SDK');
+    onLog?.('createThread: using OpenAI SDK');
     const client = new OpenAI({ apiKey });
 
   console.log('createThread: creating thread');
+  onLog?.('createThread: creating thread');
   if (signal?.aborted) throw new Error('aborted');
   const thread: any = await client.beta.threads.create();
     console.log('createThread: thread created', thread?.id);
+    onLog?.(`createThread: thread created (id:${thread?.id})`);
 
     // Ensure we have an assistant id stored. If not, create an assistant
     // that declares the file_search tool and persist its id in SecureStore.
@@ -155,17 +167,22 @@ async function createThread(apiKey: string, fileId: string, prompt: string, sign
         if (assistantId) {
           await SecureStore.setItemAsync(ASSISTANT_ID_STORAGE_KEY, assistantId);
           console.log('createThread: assistant created and saved', assistantId);
+          onLog?.(`createThread: assistant created (id:${assistantId})`);
         } else {
           console.log('createThread: assistant created but no id returned');
+          onLog?.('createThread: assistant created but no id returned');
         }
       } catch (e) {
         console.log('createThread: failed to create assistant, will continue without saving', e);
+        onLog?.('createThread: failed to create assistant');
       }
     } else {
-      console.log('createThread: using stored assistant id', assistantId);
+    console.log('createThread: using stored assistant id', assistantId);
+    onLog?.(`createThread: using assistant id:${assistantId}`);
     }
 
     console.log('createThread: adding user message with attachment');
+  onLog?.('createThread: adding user message');
   if (signal?.aborted) throw new Error('aborted');
   await client.beta.threads.messages.create(thread.id, {
       role: 'user',
@@ -174,26 +191,32 @@ Only return the JSON output and no explanations or any other decorative text, do
       attachments: [{ file_id: fileId, tools: [{ type: 'file_search' }] }],
   } as any);
     console.log('createThread: user message created');
+    onLog?.('createThread: user message created');
 
-    console.log('createThread: starting assistant run');
+  console.log('createThread: starting assistant run');
+  onLog?.('createThread: starting run');
     // Pass the assistant_id when starting the run. If available, prefer
     // createAndPoll helper which returns when the run is complete.
     let run: any;
     if (assistantId && (client.beta.threads.runs as any).createAndPoll) {
       try {
-        if (signal?.aborted) throw new Error('aborted');
-        run = await (client.beta.threads.runs as any).createAndPoll(thread.id, { assistant_id: assistantId } as any);
-        console.log('createThread: run completed via createAndPoll', run?.id);
+  if (signal?.aborted) throw new Error('aborted');
+  run = await (client.beta.threads.runs as any).createAndPoll(thread.id, { assistant_id: assistantId } as any);
+  console.log('createThread: run completed via createAndPoll', run?.id);
+  onLog?.('createThread: run completed');
       } catch (e) {
         console.log('createThread: createAndPoll failed, falling back to create+poll', e);
+  onLog?.('createThread: createAndPoll failed, falling back');
       }
     }
     if (!run) {
-      if (signal?.aborted) throw new Error('aborted');
-      const createdRun: any = await client.beta.threads.runs.create(thread.id, { assistant_id: assistantId } as any);
-      console.log('createThread: run created', createdRun?.id);
+  if (signal?.aborted) throw new Error('aborted');
+  const createdRun: any = await client.beta.threads.runs.create(thread.id, { assistant_id: assistantId } as any);
+  console.log('createThread: run created', createdRun?.id);
+  onLog?.('createThread: run created');
 
-      console.log('createThread: polling run status');
+  console.log('createThread: polling run status');
+  onLog?.('createThread: polling run status');
       const runStatus: any = await client.beta.threads.runs.poll(createdRun.id, { thread_id: thread.id } as any);
       console.log('createThread: run status', runStatus?.status);
       if (runStatus.status !== 'completed') {
@@ -204,6 +227,7 @@ Only return the JSON output and no explanations or any other decorative text, do
     }
 
   console.log('createThread: fetching messages');
+  onLog?.('createThread: fetching messages');
   if (signal?.aborted) throw new Error('aborted');
   const messages: any = await client.beta.threads.messages.list(thread.id);
     console.log('createThread: messages fetched', (messages.data || []).length);
@@ -211,27 +235,32 @@ Only return the JSON output and no explanations or any other decorative text, do
     if (!assistantMessage) throw new Error('No assistant message returned');
     const textBlock = (assistantMessage.content || []).find((c: any) => c.type === 'text');
     const responseText = textBlock?.text?.value ?? '';
-    console.log('createThread: assistant response (truncated)', responseText.slice(0, 400));
+  console.log('createThread: assistant response (truncated)', responseText.slice(0, 400));
+  onLog?.('createThread: assistant response received');
 
     // Parse JSON from assistant
     let parsed: any;
     try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       const jsonText = jsonMatch ? jsonMatch[0] : responseText;
       parsed = JSON.parse(jsonText);
-      console.log('createThread: parsed assistant JSON');
+  console.log('createThread: parsed assistant JSON');
+  onLog?.('createThread: parsed assistant JSON');
     } catch (err) {
       console.log('createThread: failed to parse assistant JSON', err);
-      throw new Error('Assistant response is not valid JSON');
+  onLog?.('createThread: failed to parse assistant JSON');
+  throw new Error('Assistant response is not valid JSON');
     }
 
     // Cleanup thread (best-effort)
     try {
       if (signal?.aborted) {
         console.log('createThread: abort detected before delete, skipping cleanup');
+        onLog?.('createThread: abort detected, skipping cleanup');
       } else {
         await client.beta.threads.delete(thread.id);
         console.log('createThread: thread deleted');
+        onLog?.('createThread: thread deleted');
       }
     } catch (e) {
       console.log('createThread: failed to delete thread', e);
@@ -287,8 +316,8 @@ export async function processStatementFile(options: {
 
     const prompt = [
       systemPrompt,
-      bank ? bank.prompt : '',
       entitiesListText,
+      bank ? bank.prompt : '',
     ]
       .filter(Boolean)
       .join('\n');
@@ -311,7 +340,7 @@ export async function processStatementFile(options: {
 
       for (let i = 0; i < total; i++) {
         const t = txns[i];
-        console.log(t);
+        console.log("adding transaction");
 
         // Resolve category -> entity. The assistant is instructed to return the
         // entity id where possible. Support both id and label fallback.
