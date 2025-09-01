@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, List, Menu, Portal, RadioButton, Text } from 'react-native-paper';
+import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, List, Menu, Portal, RadioButton, Snackbar, Text, ProgressBar } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
 import { archiveStatement, createStatement, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
@@ -105,6 +105,9 @@ export default function Index() {
     null
   );
   const [modalVisible, setModalVisible] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '' });
+  const [progress, setProgress] = useState<Record<string, number>>({});
+  const showToast = (message: string) => setToast({ visible: true, message });
 
   useEffect(() => {
     (async () => {
@@ -137,6 +140,8 @@ export default function Index() {
     });
     await refreshStatements();
     setModalVisible(false);
+    setProgress((p) => ({ ...p, [stmt.id]: 0 }));
+    showToast('Statement is being processed');
     const apiKey = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
     const sysPrompt =
       (await SecureStore.getItemAsync(SYSTEM_PROMPT_STORAGE_KEY)) ??
@@ -152,7 +157,23 @@ export default function Index() {
       file: fileObj,
       apiKey: apiKey || '',
       systemPrompt: sysPrompt,
-    }).catch((e) => console.error(e));
+      onProgress: (p) =>
+        setProgress((prev) => ({ ...prev, [stmt.id]: p })),
+    })
+      .then(async () => {
+        setProgress((prev) => {
+          const { [stmt.id]: _, ...rest } = prev;
+          return rest;
+        });
+        await refreshStatements();
+      })
+      .catch((e) => {
+        showToast(e.message || 'Processing failed');
+        setProgress((prev) => {
+          const { [stmt.id]: _, ...rest } = prev;
+          return rest;
+        });
+      });
     setSelectedBank(null);
     setFile(null);
   };
@@ -243,6 +264,9 @@ export default function Index() {
                             </View>
                           </View>
                         </View>
+                        {item.status === 'new' && progress[item.id] !== undefined && (
+                          <ProgressBar progress={progress[item.id]} style={{ marginTop: 8 }} />
+                        )}
                       </Card.Content>
                     </Card>
                   ))}
@@ -346,10 +370,19 @@ export default function Index() {
   });
 
   return (
-    <BottomNavigation
-      navigationState={{ index: navIndex, routes: navRoutes }}
-      onIndexChange={setNavIndex}
-      renderScene={renderScene}
-    />
+    <>
+      <BottomNavigation
+        navigationState={{ index: navIndex, routes: navRoutes }}
+        onIndexChange={setNavIndex}
+        renderScene={renderScene}
+      />
+      <Snackbar
+        visible={toast.visible}
+        onDismiss={() => setToast({ visible: false, message: '' })}
+        duration={3000}
+      >
+        {toast.message}
+      </Snackbar>
+    </>
   );
 }

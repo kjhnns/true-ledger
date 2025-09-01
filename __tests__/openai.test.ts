@@ -3,6 +3,7 @@ jest.mock('expo-sqlite', () => require('../test-utils/sqliteMock').sqliteMock);
 import { initDb } from '../lib/db';
 import { createBankAccount, createExpenseCategory } from '../lib/entities';
 import { createStatement, getStatement } from '../lib/statements';
+import { listTransactions } from '../lib/transactions';
 import { processStatementFile, DEFAULT_SYSTEM_PROMPT } from '../lib/openai';
 const sqlite = require('expo-sqlite');
 
@@ -12,7 +13,7 @@ describe('openai processing', () => {
     await initDb();
   });
 
-  test('processStatementFile uploads and creates thread', async () => {
+  test('processStatementFile reports progress and inserts transactions', async () => {
     const bank = await createBankAccount({
       label: 'Bank',
       prompt: 'bank prompt',
@@ -33,21 +34,31 @@ describe('openai processing', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: 'thread456' }),
+        json: async () => ({
+          transactions: [
+            { date: '2024-01-01', amount: 100, description: 'A' },
+            { date: '2024-01-02', amount: 200, description: 'B', isShared: true },
+          ],
+        }),
       });
     // @ts-ignore
     global.fetch = fakeFetch;
+    const events: number[] = [];
     await processStatementFile({
       statementId: stmt.id,
       bankId: bank.id,
       file: new Blob(['x']),
       apiKey: 'sk',
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      onProgress: (p) => events.push(p),
     });
     const updated = await getStatement(stmt.id);
     expect(updated?.externalFileId).toBe('file123');
     expect(updated?.status).toBe('processed');
     expect(fakeFetch).toHaveBeenCalledTimes(2);
+    const txns = await listTransactions(stmt.id);
+    expect(txns).toHaveLength(2);
+    expect(events).toContain(1);
   });
 
   test('processStatementFile sets error on failure', async () => {
