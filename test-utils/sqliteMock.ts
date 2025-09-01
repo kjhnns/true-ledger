@@ -160,12 +160,26 @@ export const sqliteMock = {
             if (col === 'reviewed_at') row.reviewed_at = value;
           });
         }
-      } else if (sql.startsWith('UPDATE statements SET status=')) {
-        const [status, reviewed_at, id] = params;
+      } else if (sql.startsWith('UPDATE statements SET external_file_id=')) {
+        const [external_file_id, id] = params;
         const row = tables.statements.find((r) => r.id === id);
         if (row) {
-          row.status = status;
-          row.reviewed_at = reviewed_at;
+          row.external_file_id = external_file_id;
+        }
+      } else if (sql.startsWith('UPDATE statements SET status=')) {
+        if (sql.includes('reviewed_at')) {
+          const [status, reviewed_at, id] = params;
+          const row = tables.statements.find((r) => r.id === id);
+          if (row) {
+            row.status = status;
+            row.reviewed_at = reviewed_at;
+          }
+        } else {
+          const [status, id] = params;
+          const row = tables.statements.find((r) => r.id === id);
+          if (row) {
+            row.status = status;
+          }
         }
       }
     },

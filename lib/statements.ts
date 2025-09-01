@@ -3,7 +3,7 @@ import { getDb } from './db';
 import { getEntity, listExpenseCategories } from './entities';
 import { createTransaction } from './transactions';
 
-export const STATEMENT_STATUSES = ['new', 'processed', 'reviewed', 'published'] as const;
+export const STATEMENT_STATUSES = ['new', 'processed', 'reviewed', 'published', 'error'] as const;
 export type StatementStatus = (typeof STATEMENT_STATUSES)[number];
 
 export interface Statement {
