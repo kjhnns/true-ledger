@@ -83,6 +83,17 @@ export async function createTransaction(
   return mapRow(row);
 }
 
+export function getReviewedAmountProgress(
+  txns: Pick<Transaction, 'amount' | 'reviewedAt'>[]
+): { total: number; reviewed: number; percent: number } {
+  const total = txns.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const reviewed = txns.reduce(
+    (sum, t) => sum + (t.reviewedAt ? Math.abs(t.amount) : 0),
+    0
+  );
+  return { total, reviewed, percent: total === 0 ? 0 : reviewed / total };
+}
+
 export async function listTransactions(
   statementId: string
 ): Promise<Transaction[]> {
