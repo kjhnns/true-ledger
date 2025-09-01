@@ -3,13 +3,14 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, List, Menu, Portal, ProgressBar, RadioButton, Snackbar, Text } from 'react-native-paper';
+import { ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, Menu, Portal, Snackbar, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
 import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, processStatementFile, SYSTEM_PROMPT_STORAGE_KEY } from '../lib/openai';
 import { archiveStatement, createStatement, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
 import Settings from './settings';
+import UploadModal from './UploadModal';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -105,6 +106,12 @@ export default function Index() {
     null
   );
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalScreen, setModalScreen] = useState<'form' | 'processing'>('form');
+  const [processingStmtId, setProcessingStmtId] = useState<string | null>(null);
+  const [processingLog, setProcessingLog] = useState<string>('');
+  const [processingCompleted, setProcessingCompleted] = useState(false);
+  const [processingAbortRequested, setProcessingAbortRequested] = useState(false);
+  const [processingAbortController, setProcessingAbortController] = useState<AbortController | null>(null);
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [progress, setProgress] = useState<Record<string, number>>({});
   const showToast = (message: string) => setToast({ visible: true, message });
@@ -139,9 +146,15 @@ export default function Index() {
       status: 'new',
     });
     await refreshStatements();
-    setModalVisible(false);
-    setProgress((p) => ({ ...p, [stmt.id]: 0 }));
-    showToast('Statement is being processed');
+    // ensure modal is visible and switch to processing screen
+  setModalVisible(true);
+  setModalScreen('processing');
+  setProcessingStmtId(stmt.id);
+    setProcessingLog('Queued for processing...\n');
+  setProcessingCompleted(false);
+  setProcessingAbortRequested(false);
+  setProgress((p) => ({ ...p, [stmt.id]: 0 }));
+  showToast('Statement is being processed');
     const apiKey = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
     const sysPrompt =
       (await SecureStore.getItemAsync(SYSTEM_PROMPT_STORAGE_KEY)) ??
@@ -151,16 +164,25 @@ export default function Index() {
       name: file.name,
       type: file.mimeType || 'application/pdf',
     };
+    const controller = new AbortController();
+    setProcessingAbortController(controller);
+
     processStatementFile({
       statementId: stmt.id,
       bankId: selectedBank,
       file: fileObj,
       apiKey: apiKey || '',
       systemPrompt: sysPrompt,
-      onProgress: (p) =>
-        setProgress((prev) => ({ ...prev, [stmt.id]: p })),
+      signal: controller.signal,
+      onProgress: (p) => {
+        setProgress((prev) => ({ ...prev, [stmt.id]: p }));
+        setProcessingLog((l) => l + `Progress: ${(p * 100).toFixed(0)}%\n`);
+      },
     })
       .then(async () => {
+        // mark completed
+        setProcessingLog((l) => l + 'Processing completed\n');
+        setProcessingCompleted(true);
         setProgress((prev) => {
           const { [stmt.id]: _, ...rest } = prev;
           return rest;
@@ -168,18 +190,25 @@ export default function Index() {
         await refreshStatements();
       })
       .catch((e) => {
-        showToast(e.message || 'Processing failed');
+        setProcessingLog((l) => l + `Error: ${e?.message ?? String(e)}\n`);
+        setProcessingCompleted(true);
         setProgress((prev) => {
           const { [stmt.id]: _, ...rest } = prev;
           return rest;
         });
+        showToast(e.message || 'Processing failed');
+        refreshStatements();
       });
-    setSelectedBank(null);
-    setFile(null);
+    // keep modal open on processing screen until user closes
   };
 
   const openUploadModal = async () => {
-    await loadBanksForModal(setBanks, setModalVisible);
+  setModalScreen('form');
+  setProcessingLog('');
+  setProcessingStmtId(null);
+  setProcessingCompleted(false);
+  setProcessingAbortRequested(false);
+  await loadBanksForModal(setBanks, setModalVisible);
   };
 
   const StatementsRoute = () => {
@@ -260,7 +289,7 @@ export default function Index() {
                           <TouchableOpacity style={{ flex: 1 }} onPress={() => router.push(`/statements/${item.id}`)}>
                             <Text style={{ fontWeight: '700' }}>{formatRange(item.earliest, item.latest)}</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                              <Chip mode="outlined" style={{ marginRight: 8 }}>{item.bankLabel}</Chip>
+                              <Text style={{ paddingRight: 10}}>{item.bankLabel}</Text>
                               <Chip mode="outlined" style={{ marginRight: 8 }}>{getStatusLabel(item)}</Chip>
                               <Text style={{ color: 'gray' }}>{new Date(item.uploadDate).toLocaleDateString()}</Text>
                             </View>
@@ -272,9 +301,7 @@ export default function Index() {
                             </View>
                           </View>
                         </View>
-                        {item.status === 'new' && progress[item.id] !== undefined && (
-                          <ProgressBar progress={progress[item.id]} style={{ marginTop: 8 }} />
-                        )}
+                        {/* per-item progress removed - overall processing is shown in the upload modal */}
                       </Card.Content>
                     </Card>
                   ))}
@@ -303,34 +330,40 @@ export default function Index() {
           </Dialog>
         </Portal>
 
-        <Modal visible={modalVisible} animationType="slide">
-          <View style={{ flex: 1, padding: 16, paddingTop: 64 }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 12 }}>Upload bank statement</Text>
-
-            <List.Section>
-              <List.Subheader>Bank</List.Subheader>
-              <RadioButton.Group onValueChange={(value) => setSelectedBank(value)} value={selectedBank ?? ''}>
-                {banks.map((b) => (
-                  <RadioButton.Item key={b.id} label={b.label} value={b.id} />
-                ))}
-              </RadioButton.Group>
-            </List.Section>
-
-            <List.Section>
-              <List.Subheader>File</List.Subheader>
-              <Button mode="contained" icon="file-upload" onPress={pickFile} style={{ marginBottom: 8 }} accessibilityLabel="Pick PDF file">
-                Pick PDF file
-              </Button>
-              <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>Only PDF files are allowed</Text>
-              {file && <Text style={{ marginVertical: 8 }}>{file.name}</Text>}
-            </List.Section>
-
-            <View style={{ marginTop: 12, flexDirection: 'row', gap: 8 }}>
-              <Button mode="contained" onPress={upload} style={{ marginRight: 8 }}>Upload</Button>
-              <Button onPress={() => { setModalVisible(false); setSelectedBank(null); setFile(null); }}>Cancel</Button>
-            </View>
-          </View>
-        </Modal>
+        <UploadModal
+          visible={modalVisible}
+          modalScreen={modalScreen}
+          banks={banks}
+          selectedBank={selectedBank}
+          file={file}
+          processingStmtId={processingStmtId}
+          processingLog={processingLog}
+          processingCompleted={processingCompleted}
+          onPickFile={pickFile}
+          onUpload={upload}
+          onCancelForm={() => { setModalVisible(false); setSelectedBank(null); setFile(null); setModalScreen('form'); }}
+          onAbort={() => {
+            setProcessingAbortRequested(true);
+            setProcessingLog((l) => l + 'Abort requested by user. Attempting to cancel...\n');
+            if (processingAbortController) {
+              processingAbortController.abort();
+              setProcessingAbortController(null);
+            }
+          }}
+          onClose={() => {
+            if (processingCompleted) {
+              setModalVisible(false);
+              setModalScreen('form');
+              setProcessingStmtId(null);
+              setProcessingLog('');
+              setProcessingCompleted(false);
+            } else {
+              setProcessingLog((l) => l + 'Processing still running — wait or abort.\n');
+            }
+          }}
+          progress={progress}
+          setSelectedBank={(v) => setSelectedBank(v)}
+        />
 
         {/* bottom controls: archived toggle and upload button - part of normal layout */}
         <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

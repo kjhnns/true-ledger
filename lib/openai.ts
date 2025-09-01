@@ -1,4 +1,19 @@
-import * as SecureStore from 'expo-secure-store';
+type SecureStoreType = {
+  getItemAsync: (key: string) => Promise<string | null>;
+  setItemAsync: (key: string, value: string) => Promise<void>;
+  deleteItemAsync?: (key: string) => Promise<void>;
+};
+
+let SecureStore: SecureStoreType;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  SecureStore = require('expo-secure-store');
+} catch (e) {
+  SecureStore = {
+    getItemAsync: async (key: string) => (process.env[key] as string) ?? null,
+    setItemAsync: async (key: string, value: string) => { process.env[key] = value; },
+  };
+}
 import OpenAI from 'openai';
 import { getDb } from './db';
 import { getEntity, listEntities, listExpenseCategories } from './entities';
@@ -22,7 +37,7 @@ export const DEFAULT_SYSTEM_PROMPT = `You are a precise financial data parser. E
 }
 `;
 
-async function uploadFile(apiKey: string, file: any): Promise<string> {
+async function uploadFile(apiKey: string, file: any, signal?: AbortSignal): Promise<string> {
   // Use the installed OpenAI SDK (imported at module top). If the provided
   // file is a browser Blob (common in tests) we skip the SDK upload and use
   // the HTTP fallback which tests mock.
@@ -38,6 +53,7 @@ async function uploadFile(apiKey: string, file: any): Promise<string> {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}` },
       body: form,
+      signal,
     });
     if (!res.ok) throw new Error('file upload failed');
     const json = await res.json();
@@ -48,8 +64,9 @@ async function uploadFile(apiKey: string, file: any): Promise<string> {
   // (File, Blob, stream). The SDK will handle uploading. If the SDK upload
   // fails (for example in the test environment where `file` is a stub),
   // fall back to the HTTP fetch upload used by tests.
-  try {
+    try {
     console.log('uploadFile: attempting SDK file upload');
+    if (signal?.aborted) throw new Error('aborted');
     const res: any = await client.files.create({ file, purpose: 'assistants' } as any);
     console.log('uploadFile: SDK upload succeeded, file id', res.id);
     return res.id as string;
@@ -62,6 +79,7 @@ async function uploadFile(apiKey: string, file: any): Promise<string> {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}` },
       body: form,
+      signal,
     });
     if (!res.ok) throw new Error('file upload failed');
     const json = await res.json();
@@ -69,13 +87,13 @@ async function uploadFile(apiKey: string, file: any): Promise<string> {
   }
 }
 
-async function createThread(apiKey: string, fileId: string, prompt: string) {
+async function createThread(apiKey: string, fileId: string, prompt: string, signal?: AbortSignal) {
   // Helper to perform the HTTP fallback create/run used by tests.
   async function httpCreateThread() {
     const createRes = await fetch('https://api.openai.com/v1/threads', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+  body: JSON.stringify({
         messages: [
           {
             role: 'user',
@@ -83,7 +101,9 @@ async function createThread(apiKey: string, fileId: string, prompt: string) {
             attachments: [{ file_id: fileId, tools: [{ type: 'file_search' }] }],
           },
         ],
-      }),
+  }),
+  // signal passed from outer scope if provided
+      signal,
     });
     if (!createRes.ok) throw new Error('thread creation failed');
     const thread = await createRes.json();
@@ -96,6 +116,7 @@ async function createThread(apiKey: string, fileId: string, prompt: string) {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
+      signal,
     });
     if (!runRes.ok) throw new Error('thread run failed');
     const runJson = await runRes.json();
@@ -114,8 +135,9 @@ async function createThread(apiKey: string, fileId: string, prompt: string) {
     console.log('createThread: using OpenAI SDK');
     const client = new OpenAI({ apiKey });
 
-    console.log('createThread: creating thread');
-    const thread: any = await client.beta.threads.create();
+  console.log('createThread: creating thread');
+  if (signal?.aborted) throw new Error('aborted');
+  const thread: any = await client.beta.threads.create();
     console.log('createThread: thread created', thread?.id);
 
     // Ensure we have an assistant id stored. If not, create an assistant
@@ -144,12 +166,13 @@ async function createThread(apiKey: string, fileId: string, prompt: string) {
     }
 
     console.log('createThread: adding user message with attachment');
-    await client.beta.threads.messages.create(thread.id, {
+  if (signal?.aborted) throw new Error('aborted');
+  await client.beta.threads.messages.create(thread.id, {
       role: 'user',
       content: `${prompt}
 Only return the JSON output and no explanations or any other decorative text, do not put markdown JSON codeblock around the output transactions from the attached bank statement PDF.`,
       attachments: [{ file_id: fileId, tools: [{ type: 'file_search' }] }],
-    } as any);
+  } as any);
     console.log('createThread: user message created');
 
     console.log('createThread: starting assistant run');
@@ -158,6 +181,7 @@ Only return the JSON output and no explanations or any other decorative text, do
     let run: any;
     if (assistantId && (client.beta.threads.runs as any).createAndPoll) {
       try {
+        if (signal?.aborted) throw new Error('aborted');
         run = await (client.beta.threads.runs as any).createAndPoll(thread.id, { assistant_id: assistantId } as any);
         console.log('createThread: run completed via createAndPoll', run?.id);
       } catch (e) {
@@ -165,6 +189,7 @@ Only return the JSON output and no explanations or any other decorative text, do
       }
     }
     if (!run) {
+      if (signal?.aborted) throw new Error('aborted');
       const createdRun: any = await client.beta.threads.runs.create(thread.id, { assistant_id: assistantId } as any);
       console.log('createThread: run created', createdRun?.id);
 
@@ -178,8 +203,9 @@ Only return the JSON output and no explanations or any other decorative text, do
       run = runStatus;
     }
 
-    console.log('createThread: fetching messages');
-    const messages: any = await client.beta.threads.messages.list(thread.id);
+  console.log('createThread: fetching messages');
+  if (signal?.aborted) throw new Error('aborted');
+  const messages: any = await client.beta.threads.messages.list(thread.id);
     console.log('createThread: messages fetched', (messages.data || []).length);
     const assistantMessage = (messages.data || []).find((m: any) => m.role === 'assistant');
     if (!assistantMessage) throw new Error('No assistant message returned');
@@ -201,8 +227,12 @@ Only return the JSON output and no explanations or any other decorative text, do
 
     // Cleanup thread (best-effort)
     try {
-      await client.beta.threads.delete(thread.id);
-      console.log('createThread: thread deleted');
+      if (signal?.aborted) {
+        console.log('createThread: abort detected before delete, skipping cleanup');
+      } else {
+        await client.beta.threads.delete(thread.id);
+        console.log('createThread: thread deleted');
+      }
     } catch (e) {
       console.log('createThread: failed to delete thread', e);
     }
@@ -223,13 +253,14 @@ export async function processStatementFile(options: {
   apiKey: string;
   systemPrompt: string;
   onProgress?: (p: number) => void;
+  signal?: AbortSignal;
 }) {
-  const { statementId, bankId, file, apiKey, systemPrompt, onProgress } = options;
+  const { statementId, bankId, file, apiKey, systemPrompt, onProgress, signal } = options;
   const db = await getDb();
   try {
     if (!apiKey) throw new Error('missing api key');
     onProgress?.(0);
-    const fileId = await uploadFile(apiKey, file);
+    const fileId = await uploadFile(apiKey, file, signal);
     console.log(fileId);
     onProgress?.(0.25);
     await db.runAsync(
@@ -262,7 +293,7 @@ export async function processStatementFile(options: {
       .filter(Boolean)
       .join('\n');
       console.log('PROMPT', prompt);
-    const thread = await createThread(apiKey, fileId, prompt);
+  const thread = await createThread(apiKey, fileId, prompt, signal);
     console.log(thread)
     onProgress?.(0.5);
     const txns = thread.transactions ?? [];
