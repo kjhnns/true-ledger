@@ -99,7 +99,6 @@ export default function Index() {
   const [navIndex, setNavIndex] = useState(0);
   const [navRoutes] = useState([
     { key: 'statements', title: 'Statements', icon: 'file-document' },
-    { key: 'manage', title: 'Manage', icon: 'folder' },
     { key: 'settings', title: 'Settings', icon: 'cog' },
   ]);
   const [statements, setStatements] = useState<StatementMeta[]>([]);
@@ -470,18 +469,6 @@ export default function Index() {
     );
   };
 
-  const ManageRoute = () => (
-    <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
-      <Text style={{ fontSize: 18, marginBottom: 8 }}>Manage</Text>
-      <Button mode="contained" onPress={() => router.push('/bank-accounts')} style={{ marginBottom: 8 }}>
-        Manage bank accounts
-      </Button>
-      <Button mode="contained" onPress={() => router.push('/expense-categories')}>
-        Manage expense categories
-      </Button>
-    </View>
-  );
-
   const SettingsRoute = () => (
     <View style={{ flex: 1 }}>
       <Settings />
@@ -490,7 +477,6 @@ export default function Index() {
 
   const renderScene = BottomNavigation.SceneMap({
     statements: StatementsRoute,
-    manage: ManageRoute,
     settings: SettingsRoute,
   });
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
+import { useRouter } from "expo-router";
 import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, SYSTEM_PROMPT_STORAGE_KEY } from "../lib/openai";
 import { DEFAULT_SHARED_PERCENT, getDefaultSharedPercent, setDefaultSharedPercent } from "../lib/settings";
 
@@ -12,6 +13,27 @@ function formatDate(dateString: string | null) {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "";
   return date.toLocaleDateString();
+}
+
+function ManageButtons() {
+  const router = useRouter();
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <Button
+        mode="contained"
+        onPress={() => router.push('/bank-accounts')}
+        style={{ marginBottom: 8 }}
+      >
+        Manage bank accounts
+      </Button>
+      <Button
+        mode="contained"
+        onPress={() => router.push('/expense-categories')}
+      >
+        Manage expense categories
+      </Button>
+    </View>
+  );
 }
 
 export default function Settings() {
@@ -83,7 +105,8 @@ const handleRemove = () => {
 
   if (!hasKey || editing) {
     return (
-      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, justifyContent: 'center' }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
+        <ManageButtons />
         <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
         <TextInput
           mode="outlined"
@@ -128,7 +151,8 @@ const handleRemove = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, justifyContent: 'center' }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
+      <ManageButtons />
       <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
       <Text style={{ marginBottom: 16 }}>
         Key saved • Last updated {formatDate(updatedAt)}
