@@ -1,12 +1,14 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useState, useMemo } from 'react';
 import { Alert, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import {
   Button,
   Card,
   Checkbox,
+  IconButton,
   List,
   Modal,
+  Menu,
   Portal,
   SegmentedButtons,
   Switch,
@@ -27,8 +29,10 @@ import {
   Transaction,
   updateTransaction,
   getReviewedAmountProgress,
+  markAllTransactionsReviewed,
 } from '../../lib/transactions';
 import { getDefaultSharedPercent } from '../../lib/settings';
+import LearnModal, { LearnTxn } from '../LearnModal';
 
 interface TxnRow extends Transaction {
   senderLabel: string;
@@ -37,6 +41,7 @@ interface TxnRow extends Transaction {
 
 export default function StatementTransactions() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const navigation = useNavigation();
   const [transactions, setTransactions] = useState<TxnRow[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [picker, setPicker] = useState<{ txnId: string; field: 'sender' | 'recipient' } | null>(null);
@@ -57,6 +62,8 @@ export default function StatementTransactions() {
   const [defaultPercent, setDefaultPercent] = useState(50);
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [ascending, setAscending] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [learnVisible, setLearnVisible] = useState(false);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const theme = useTheme();
@@ -108,6 +115,12 @@ export default function StatementTransactions() {
       setEntities(lists.flat());
     })();
   }, []);
+
+  useEffect(() => {
+    if (meta?.bank) {
+      navigation.setOptions({ title: meta.bank });
+    }
+  }, [navigation, meta?.bank]);
 
   const formatDate = (ts: number) => new Date(ts).toLocaleDateString();
 
@@ -239,15 +252,48 @@ export default function StatementTransactions() {
         <Text>No transactions</Text>
       ) : (
         <ScrollView>
-          <View style={{ marginBottom: 12 }}>
-            <SegmentedButtons
-              value={sortBy}
-              onValueChange={(v) => toggleSort(v as 'date' | 'amount')}
-              buttons={[
-                { value: 'date', label: 'Date' },
-                { value: 'amount', label: 'Amount' },
-              ]}
-            />
+          <View style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <SegmentedButtons
+                value={sortBy}
+                onValueChange={(v) => toggleSort(v as 'date' | 'amount')}
+                buttons={[
+                  { value: 'date', label: 'Date' },
+                  { value: 'amount', label: 'Amount' },
+                ]}
+              />
+            </View>
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => setMenuVisible(false)}
+              anchor={
+                <IconButton
+                  icon="dots-vertical"
+                  onPress={() => setMenuVisible(true)}
+                  accessibilityLabel="Options"
+                />
+              }
+            >
+              <Menu.Item
+                onPress={async () => {
+                  setMenuVisible(false);
+                  if (id) {
+                    await markAllTransactionsReviewed(id);
+                    const now = Date.now();
+                    setTransactions((prev) => prev.map((t) => ({ ...t, reviewedAt: now })));
+                    setReviewedCount(meta ? meta.count : transactions.length);
+                  }
+                }}
+                title="Mark all reviewed"
+              />
+              <Menu.Item
+                onPress={() => {
+                  setMenuVisible(false);
+                  setLearnVisible(true);
+                }}
+                title="Learn mode"
+              />
+            </Menu>
           </View>
           <ScrollView>
             {sorted.map((item) => {
@@ -290,6 +336,15 @@ export default function StatementTransactions() {
                 })}
               </ScrollView>
         </ScrollView>
+      )}
+      {meta && (
+        <LearnModal
+          visible={learnVisible}
+          bank={{ id: meta.bankId, prompt: meta.bankPrompt, label: meta.bank, currency: meta.currency }}
+          transactions={transactions as unknown as LearnTxn[]}
+          onDismiss={() => setLearnVisible(false)}
+          onComplete={(p) => setMeta((m) => (m ? { ...m, bankPrompt: p } : m))}
+        />
       )}
       <Portal>
         <Modal visible={promptModal} onDismiss={() => setPromptModal(false)} contentContainerStyle={{ backgroundColor: theme.colors.background, padding: 12, margin: 20, borderRadius: 12 }}>
