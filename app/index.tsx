@@ -317,23 +317,36 @@ export default function Index() {
           ) : (
             <ScrollView>
                   {filtered.map((item) => (
-                    <Card key={item.id} style={{ marginBottom: 8 }} >
+                    <Card key={item.id} style={{ marginBottom: 8 }}>
                       <Card.Content>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <TouchableOpacity style={{ flex: 1 }} onPress={() => router.push(`/statements/${item.id}`)}>
-                            <Text style={{ fontWeight: '700' }}>{formatRange(item.earliest, item.latest)}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                              <Text style={{ paddingRight: 10}}>{item.bankLabel}</Text>
-                              <Chip mode="outlined" style={{ marginRight: 8 }}>{getStatusLabel(item)}</Chip>
-                              <Text style={{ color: 'gray' }}>{new Date(item.uploadDate).toLocaleDateString()}</Text>
-                            </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <TouchableOpacity
+                            style={{ flex: 1 }}
+                            onPress={() => router.push(`/statements/${item.id}`)}
+                          >
+                            <Text style={{ fontWeight: '700' }}>
+                              {formatRange(item.earliest, item.latest)}
+                            </Text>
+                            <Text>
+                              {item.bankLabel} • {item.reviewedCount}/{item.transactionCount}
+                              {` reviewed`}
+                            </Text>
+                            <Text>Status: {getStatusLabel(item)}</Text>
                           </TouchableOpacity>
-                          <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
-                            <Text>{item.transactionCount} records</Text>
-                            <Text style={{ fontSize: 12, color: 'gray' }}>{item.reviewedCount}/{item.transactionCount} reviewed</Text>
-                            <View style={{ marginTop: 8 }}>
-                              <ActionMenu item={item} viewArchived={viewArchived} onRequestDelete={(id) => { setDeleteTarget(id); setConfirmVisible(true); }} refresh={refreshStatements} onReprocess={(stmt) => { setReprocessTarget(stmt); setReprocessConfirm(true); }} />
-                            </View>
+                          <View style={{ marginLeft: 12, justifyContent: 'center' }}>
+                            <ActionMenu
+                              item={item}
+                              viewArchived={viewArchived}
+                              onRequestDelete={(id) => {
+                                setDeleteTarget(id);
+                                setConfirmVisible(true);
+                              }}
+                              refresh={refreshStatements}
+                              onReprocess={(stmt) => {
+                                setReprocessTarget(stmt);
+                                setReprocessConfirm(true);
+                              }}
+                            />
                           </View>
                         </View>
                         {/* per-item progress removed - overall processing is shown in the upload modal */}

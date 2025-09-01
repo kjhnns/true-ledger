@@ -205,7 +205,7 @@ export default function StatementTransactions() {
       {meta && nf && (
         <View style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text
                 onPress={() => {
                   setPromptEdit(meta.bankPrompt);
@@ -222,7 +222,7 @@ export default function StatementTransactions() {
               <Text>Transactions: {meta.count}</Text>
               <Text>Total Amount: {nf.format(progress.total)}</Text>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <Text>
                 Reviewed: {reviewedCount} / {meta.count} ({countPct.toFixed(1)}%)
               </Text>

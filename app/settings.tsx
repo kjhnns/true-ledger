@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
-import { Button, Text, TextInput, useTheme } from "react-native-paper";
+import {
+  Button,
+  Divider,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
 import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, SYSTEM_PROMPT_STORAGE_KEY } from "../lib/openai";
@@ -18,7 +24,10 @@ function formatDate(dateString: string | null) {
 function ManageButtons() {
   const router = useRouter();
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View>
+      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+        Manage categories
+      </Text>
       <Button
         mode="contained"
         onPress={() => router.push('/bank-accounts')}
@@ -33,10 +42,7 @@ function ManageButtons() {
       >
         Manage expense categories
       </Button>
-      <Button
-        mode="contained"
-        onPress={() => router.push('/income-savings')}
-      >
+      <Button mode="contained" onPress={() => router.push('/income-savings')}>
         Manage income & savings
       </Button>
     </View>
@@ -104,73 +110,66 @@ const handleRemove = () => {
     ]);
 };
 
-  const handlePromptSave = async () => {
-    await SecureStore.setItemAsync(SYSTEM_PROMPT_STORAGE_KEY, prompt);
-    await setDefaultSharedPercent(sharedPercent);
-    Alert.alert('Settings saved.');
-  };
+const handlePromptSave = async () => {
+  await SecureStore.setItemAsync(SYSTEM_PROMPT_STORAGE_KEY, prompt);
+  await setDefaultSharedPercent(sharedPercent);
+  Alert.alert('Settings saved.');
+};
 
-  if (!hasKey || editing) {
+  const renderKeySection = () => {
+    if (!hasKey || editing) {
+      return (
+        <View>
+          <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+            OpenAI API key
+          </Text>
+          <TextInput
+            mode="outlined"
+            secureTextEntry
+            placeholder="sk-..."
+            value={input}
+            onChangeText={(text) => {
+              setInput(text);
+              if (error) setError("");
+            }}
+            style={{ marginBottom: 8 }}
+          />
+          {error ? (
+            <Text style={{ color: theme.colors.error, marginBottom: 8 }}>
+              {error}
+            </Text>
+          ) : null}
+          <Button mode="contained" onPress={handleSave}>
+            {hasKey ? 'Save new key' : 'Save key'}
+          </Button>
+        </View>
+      );
+    }
+
     return (
-      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
-        <ManageButtons />
-        <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
-        <TextInput
-          mode="outlined"
-          secureTextEntry
-          placeholder="sk-..."
-          value={input}
-          onChangeText={(text) => {
-            setInput(text);
-            if (error) setError("");
-          }}
-          style={{ marginBottom: 8 }}
-        />
-        {error ? (
-          <Text style={{ color: theme.colors.error, marginBottom: 8 }}>{error}</Text>
-        ) : null}
-        <Button mode="contained" onPress={handleSave}>
-          {hasKey ? 'Save new key' : 'Save key'}
-        </Button>
-        <View style={{ height: 32 }} />
-        <Text style={{ marginBottom: 8 }}>System prompt</Text>
-        <TextInput
-          mode="outlined"
-          multiline
-          value={prompt}
-          onChangeText={setPrompt}
-          style={{ marginBottom: 8 }}
-        />
-        <Text style={{ marginBottom: 8 }}>Default shared percentage</Text>
-        <TextInput
-          mode="outlined"
-          keyboardType="numeric"
-          value={String(sharedPercent)}
-          onChangeText={(t) => setSharedPercent(Number(t) || 0)}
-          style={{ marginBottom: 4 }}
-        />
-        <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>
-          This will be the default shared value for all entries created.
+      <View>
+        <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+          OpenAI API key
         </Text>
-        <Button onPress={handlePromptSave}>Save settings</Button>
-      </ScrollView>
+        <Text style={{ marginBottom: 16 }}>
+          Key saved • Last updated {formatDate(updatedAt)}
+        </Text>
+        <Button mode="contained" onPress={() => setEditing(true)}>
+          Replace key
+        </Button>
+        <View style={{ height: 8 }} />
+        <Button onPress={handleRemove}>Remove key</Button>
+      </View>
     );
-  }
+  };
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
       <ManageButtons />
-      <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
-      <Text style={{ marginBottom: 16 }}>
-        Key saved • Last updated {formatDate(updatedAt)}
+      <Divider style={{ marginVertical: 16 }} />
+      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+        System prompt
       </Text>
-      <Button mode="contained" onPress={() => setEditing(true)}>
-        Replace key
-      </Button>
-      <View style={{ height: 8 }} />
-      <Button onPress={handleRemove}>Remove key</Button>
-      <View style={{ height: 32 }} />
-      <Text style={{ marginBottom: 8 }}>System prompt</Text>
       <TextInput
         mode="outlined"
         multiline
@@ -178,7 +177,10 @@ const handleRemove = () => {
         onChangeText={setPrompt}
         style={{ marginBottom: 8 }}
       />
-      <Text style={{ marginBottom: 8 }}>Default shared percentage</Text>
+      <Divider style={{ marginVertical: 16 }} />
+      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+        Default shared percentage
+      </Text>
       <TextInput
         mode="outlined"
         keyboardType="numeric"
@@ -190,6 +192,8 @@ const handleRemove = () => {
         This will be the default shared value for all entries created.
       </Text>
       <Button onPress={handlePromptSave}>Save settings</Button>
+      <Divider style={{ marginVertical: 16 }} />
+      {renderKeySection()}
     </ScrollView>
   );
 }
