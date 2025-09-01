@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, View, TouchableOpacity } from 'react-native';
 import { Button, Checkbox, Modal, Portal, ProgressBar, Text } from 'react-native-paper';
 import * as SecureStore from 'expo-secure-store';
-import { OPENAI_KEY_STORAGE_KEY, learnFromTransactions } from '../lib/openai';
+import {
+  OPENAI_KEY_STORAGE_KEY,
+  LEARN_PROMPT_STORAGE_KEY,
+  DEFAULT_LEARN_PROMPT,
+  learnFromTransactions,
+} from '../lib/openai';
 import { updateBankAccount } from '../lib/entities';
 
 export type LearnTxn = {
@@ -60,6 +65,9 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
   const start = async () => {
     setScreen('progress');
     const apiKey = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
+    const base =
+      (await SecureStore.getItemAsync(LEARN_PROMPT_STORAGE_KEY)) ??
+      DEFAULT_LEARN_PROMPT;
     const list = transactions
       .filter((t) => selected.has(t.id))
       .map((t) => ({
@@ -74,6 +82,7 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
     try {
       const newPrompt = await learnFromTransactions({
         bankPrompt: bank.prompt,
+        basePrompt: base,
         transactions: list,
         apiKey: apiKey || '',
         onProgress: (p) => setProgress(p),

@@ -1,10 +1,22 @@
 jest.mock('expo-sqlite', () => require('../test-utils/sqliteMock').sqliteMock);
 
+const createResponseMock = jest.fn().mockResolvedValue({ output_text: 'new prompt' });
+jest.mock('openai', () => {
+  return function () {
+    return { responses: { create: createResponseMock } };
+  };
+});
+
 import { initDb } from '../lib/db';
 import { createBankAccount, createExpenseCategory } from '../lib/entities';
 import { createStatement, getStatement } from '../lib/statements';
 import { listTransactions } from '../lib/transactions';
-import { processStatementFile, DEFAULT_SYSTEM_PROMPT } from '../lib/openai';
+import {
+  processStatementFile,
+  DEFAULT_SYSTEM_PROMPT,
+  learnFromTransactions,
+  DEFAULT_LEARN_PROMPT,
+} from '../lib/openai';
 const sqlite = require('expo-sqlite');
 
 describe('openai processing', () => {
@@ -88,6 +100,27 @@ describe('openai processing', () => {
     ).rejects.toThrow();
     const updated = await getStatement(stmt.id);
     expect(updated?.status).toBe('error');
+  });
+
+  test('learnFromTransactions builds prompt correctly', async () => {
+    createResponseMock.mockClear();
+    await learnFromTransactions({
+      bankPrompt: 'bank',
+      basePrompt: 'base',
+      transactions: [],
+      apiKey: 'sk',
+    });
+    const input = createResponseMock.mock.calls[0][0].input;
+    expect(input.startsWith('base\nbank')).toBe(true);
+
+    createResponseMock.mockClear();
+    await learnFromTransactions({
+      bankPrompt: 'bank',
+      transactions: [],
+      apiKey: 'sk',
+    });
+    const input2 = createResponseMock.mock.calls[0][0].input;
+    expect(input2.startsWith(`${DEFAULT_LEARN_PROMPT}\nbank`)).toBe(true);
   });
 });
 
