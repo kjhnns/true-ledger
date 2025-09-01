@@ -1,5 +1,6 @@
 import { getDb } from './db';
 import { getEntity, listExpenseCategories } from './entities';
+import { createTransaction } from './transactions';
 
 export const OPENAI_KEY_STORAGE_KEY = 'openai_api_key';
 export const SYSTEM_PROMPT_STORAGE_KEY = 'system_prompt';
@@ -55,7 +56,7 @@ async function createThread(apiKey: string, fileId: string, prompt: string) {
   if (!res.ok) {
     throw new Error('thread creation failed');
   }
-  await res.json();
+  return await res.json();
 }
 
 export async function processStatementFile(options: {
@@ -64,12 +65,15 @@ export async function processStatementFile(options: {
   file: any;
   apiKey: string;
   systemPrompt: string;
+  onProgress?: (p: number) => void;
 }) {
-  const { statementId, bankId, file, apiKey, systemPrompt } = options;
+  const { statementId, bankId, file, apiKey, systemPrompt, onProgress } = options;
   const db = await getDb();
   try {
     if (!apiKey) throw new Error('missing api key');
+    onProgress?.(0);
     const fileId = await uploadFile(apiKey, file);
+    onProgress?.(0.25);
     await db.runAsync(
       'UPDATE statements SET external_file_id=? WHERE id=?',
       fileId,
@@ -84,8 +88,35 @@ export async function processStatementFile(options: {
     ]
       .filter(Boolean)
       .join('\n');
-    await createThread(apiKey, fileId, prompt);
-    await db.runAsync('UPDATE statements SET status=? WHERE id=?', 'processed', statementId);
+    const thread = await createThread(apiKey, fileId, prompt);
+    onProgress?.(0.5);
+    const txns = thread.transactions ?? [];
+    const total = txns.length;
+    if (total === 0) {
+      onProgress?.(1);
+    } else if (bank) {
+      for (let i = 0; i < total; i++) {
+        const t = txns[i];
+        await createTransaction({
+          statementId,
+          recipientId: null,
+          senderId: bank.id,
+          createdAt: Date.parse(t.date) || Date.now(),
+          amount: Math.round(t.amount),
+          currency: bank.currency,
+          location: t.location ?? null,
+          description: t.description ?? null,
+          shared: !!t.isShared,
+          sharedAmount: t.isShared ? Math.round(t.amount / 2) : null,
+        });
+        onProgress?.(0.5 + ((i + 1) / total) * 0.5);
+      }
+    }
+    await db.runAsync(
+      'UPDATE statements SET status=? WHERE id=?',
+      'processed',
+      statementId
+    );
   } catch (err) {
     await db.runAsync('UPDATE statements SET status=? WHERE id=?', 'error', statementId);
     throw err;
