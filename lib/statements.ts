@@ -47,6 +47,7 @@ function mapRow(row: any): Statement {
 export interface StatementMeta extends Statement {
   bankLabel: string;
   transactionCount: number;
+  reviewedCount: number;
   earliest: number | null;
   latest: number | null;
 }
@@ -80,6 +81,10 @@ export async function listStatementsWithMeta(): Promise<StatementMeta[]> {
       'SELECT COUNT(*) as count FROM transactions WHERE statement_id=?',
       stmt.id
     );
+    const reviewedRow = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM transactions WHERE statement_id=? AND reviewed_at IS NOT NULL',
+      stmt.id
+    );
     const bankRow = await db.getFirstAsync<{ label: string }>(
       'SELECT label FROM entities WHERE id=?',
       stmt.bankId
@@ -91,6 +96,7 @@ export async function listStatementsWithMeta(): Promise<StatementMeta[]> {
     result.push({
       ...stmt,
       transactionCount: countRow?.count ?? 0,
+      reviewedCount: reviewedRow?.count ?? 0,
       bankLabel: bankRow?.label ?? '',
       earliest: dateRow?.min ?? null,
       latest: dateRow?.max ?? null,
@@ -127,6 +133,8 @@ export async function deleteStatement(id: string): Promise<void> {
 
 export async function reprocessStatement(id: string): Promise<void> {
   const db = await getDb();
+  // remove old transactions
+  await db.runAsync('DELETE FROM transactions WHERE statement_id=?', id);
   // reset processing/review/publish timestamps and status
   await db.runAsync(
     'UPDATE statements SET processed_at=NULL, reviewed_at=NULL, published_at=NULL, status=? WHERE id=?',

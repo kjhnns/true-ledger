@@ -19,6 +19,7 @@ import {
   EntityCategory,
   getEntity,
   listEntities,
+  updateBankAccount,
 } from '../../lib/entities';
 import { getStatement } from '../../lib/statements';
 import {
@@ -26,6 +27,7 @@ import {
   Transaction,
   updateTransaction,
 } from '../../lib/transactions';
+import { getDefaultSharedPercent } from '../../lib/settings';
 
 interface TxnRow extends Transaction {
   senderLabel: string;
@@ -44,9 +46,14 @@ export default function StatementTransactions() {
     latest: number;
     bank: string;
     bankId: string;
+    bankPrompt: string;
     currency: string;
     count: number;
   } | null>(null);
+  const [reviewedCount, setReviewedCount] = useState(0);
+  const [promptModal, setPromptModal] = useState(false);
+  const [promptEdit, setPromptEdit] = useState('');
+  const [defaultPercent, setDefaultPercent] = useState(50);
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [ascending, setAscending] = useState(false);
   const { width, height } = useWindowDimensions();
@@ -56,9 +63,10 @@ export default function StatementTransactions() {
   useEffect(() => {
     (async () => {
       if (!id) return;
-      const [stmt, list] = await Promise.all([
+      const [stmt, list, percent] = await Promise.all([
         getStatement(id),
         listTransactions(id),
+        getDefaultSharedPercent(),
       ]);
       const enriched: TxnRow[] = [];
       for (const t of list) {
@@ -73,6 +81,8 @@ export default function StatementTransactions() {
         });
       }
       setTransactions(enriched);
+      setReviewedCount(list.filter((t) => t.reviewedAt).length);
+      setDefaultPercent(percent);
       if (stmt) {
         const bank = await getEntity(stmt.bankId);
         const dates = list.map((t) => t.createdAt);
@@ -82,6 +92,7 @@ export default function StatementTransactions() {
           latest: Math.max(...dates),
           bank: bank?.label ?? '',
           bankId: stmt.bankId,
+          bankPrompt: bank?.prompt ?? '',
           currency: bank?.currency ?? '',
           count: list.length,
         });
@@ -116,44 +127,22 @@ export default function StatementTransactions() {
     }
   };
 
-  const handleToggleShared = (txn: TxnRow, value: boolean) => {
+  const handleToggleShared = async (txn: TxnRow, value: boolean) => {
     if (value) {
-      Alert.prompt(
-        'Shared Amount',
-        'Enter shared amount',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'OK',
-            onPress: async (text) => {
-              const amt = Number(text);
-              if (isNaN(amt)) return;
-              await updateTransaction(txn.id, {
-                shared: true,
-                sharedAmount: amt,
-              });
-              setTransactions((prev) =>
-                prev.map((t) =>
-                  t.id === txn.id
-                    ? { ...t, shared: true, sharedAmount: amt }
-                    : t
-                )
-              );
-            },
-          },
-        ],
-        'plain-text',
-        txn.sharedAmount ? String(txn.sharedAmount) : ''
+      const amt = Math.round(txn.amount * defaultPercent / 100);
+      await updateTransaction(txn.id, { shared: true, sharedAmount: amt });
+      setTransactions((prev) =>
+        prev.map((t) =>
+          t.id === txn.id ? { ...t, shared: true, sharedAmount: amt } : t
+        )
       );
     } else {
-      (async () => {
-        await updateTransaction(txn.id, { shared: false, sharedAmount: null });
-        setTransactions((prev) =>
-          prev.map((t) =>
-            t.id === txn.id ? { ...t, shared: false, sharedAmount: null } : t
-          )
-        );
-      })();
+      await updateTransaction(txn.id, { shared: false, sharedAmount: null });
+      setTransactions((prev) =>
+        prev.map((t) =>
+          t.id === txn.id ? { ...t, shared: false, sharedAmount: null } : t
+        )
+      );
     }
   };
 
@@ -165,31 +154,7 @@ export default function StatementTransactions() {
         t.id === txn.id ? { ...t, reviewedAt: updated.reviewedAt } : t
       )
     );
-  };
-
-  const editSharedAmount = (txn: TxnRow) => {
-    Alert.prompt(
-      'Shared Amount',
-      'Enter shared amount',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'OK',
-          onPress: async (text) => {
-            const amt = Number(text);
-            if (isNaN(amt)) return;
-            await updateTransaction(txn.id, { sharedAmount: amt });
-            setTransactions((prev) =>
-              prev.map((t) =>
-                t.id === txn.id ? { ...t, sharedAmount: amt } : t
-              )
-            );
-          },
-        },
-      ],
-      'plain-text',
-      txn.sharedAmount ? String(txn.sharedAmount) : ''
-    );
+    setReviewedCount((c) => c + (reviewedAt ? 1 : -1));
   };
 
   const openEntityPicker = (txnId: string, field: 'sender' | 'recipient') => {
@@ -222,14 +187,13 @@ export default function StatementTransactions() {
     <View style={{ flex: 1, padding: 16 }}>
       {meta && (
         <View style={{ marginBottom: 16 }}>
+          <Text onPress={() => { setPromptEdit(meta.bankPrompt); setPromptModal(true); }} style={{ color: 'blue' }}>Bank: {meta.bank} ({meta.currency})</Text>
           <Text>Uploaded: {formatDate(meta.uploadDate)}</Text>
           <Text>
             Date Range: {formatDate(meta.earliest)} - {formatDate(meta.latest)}
           </Text>
-          <Text>
-            Bank: {meta.bank} ({meta.currency})
-          </Text>
           <Text>Transactions: {meta.count}</Text>
+          <Text>Reviewed: {reviewedCount} / {meta.count}</Text>
         </View>
       )}
       {transactions.length === 0 ? (
@@ -275,7 +239,7 @@ export default function StatementTransactions() {
                             <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 {item.shared && <Text style={{ marginRight: 6, color: 'gray' }}>(shared)</Text>}
-                                <Text style={{ fontWeight: '700' }}>{signed}</Text>
+                                <Text style={{ fontWeight: '700', color: isBankSender ? 'red' : isBankRecipient ? 'green' : undefined }}>{signed}</Text>
                               </View>
                               <Text style={{ color: 'gray', marginTop: 6 }}>{formatDate(item.createdAt)}</Text>
                             </View>
@@ -289,6 +253,22 @@ export default function StatementTransactions() {
         </ScrollView>
       )}
       <Portal>
+        <Modal visible={promptModal} onDismiss={() => setPromptModal(false)} contentContainerStyle={{ backgroundColor: theme.colors.background, padding: 12, margin: 20, borderRadius: 12 }}>
+          <Text style={{ marginBottom: 8 }}>Edit bank prompt</Text>
+          <TextInput
+            mode="outlined"
+            multiline
+            value={promptEdit}
+            onChangeText={setPromptEdit}
+            style={{ marginBottom: 8 }}
+          />
+          <Button onPress={async () => {
+            if (!meta) return;
+            await updateBankAccount(meta.bankId, { label: meta.bank, prompt: promptEdit, currency: meta.currency });
+            setMeta((m) => m ? { ...m, bankPrompt: promptEdit } : m);
+            setPromptModal(false);
+          }}>Save</Button>
+        </Modal>
         <Modal
           visible={!!editing}
           onDismiss={() => setEditing(null)}
@@ -320,9 +300,10 @@ export default function StatementTransactions() {
                     <Switch
                       value={!!editing.txn.shared}
                       onValueChange={async (newVal) => {
-                        await updateTransaction(editing.txn.id, { shared: newVal, sharedAmount: newVal ? (editing.txn.sharedAmount ?? null) : null });
-                        setTransactions((prev) => prev.map((t) => t.id === editing.txn.id ? { ...t, shared: newVal, sharedAmount: newVal ? (editing.txn.sharedAmount ?? null) : null } : t));
-                        setEditing({ txn: { ...editing.txn, shared: newVal, sharedAmount: newVal ? (editing.txn.sharedAmount ?? null) : null } });
+                        const amt = newVal ? Math.round(editing.txn.amount * defaultPercent / 100) : null;
+                        await updateTransaction(editing.txn.id, { shared: newVal, sharedAmount: amt });
+                        setTransactions((prev) => prev.map((t) => t.id === editing.txn.id ? { ...t, shared: newVal, sharedAmount: amt } : t));
+                        setEditing({ txn: { ...editing.txn, shared: newVal, sharedAmount: amt } });
                       }}
                     />
                     {editing.txn.shared && (
@@ -330,9 +311,10 @@ export default function StatementTransactions() {
                         mode="outlined"
                         style={{ flex: 1, marginLeft: 12, height: 40 }}
                         keyboardType="numeric"
-                        value={editing.txn.sharedAmount !== null && editing.txn.sharedAmount !== undefined ? String(editing.txn.sharedAmount) : ''}
+                        value={editing.txn.sharedAmount !== null && editing.txn.sharedAmount !== undefined ? String(Math.round((editing.txn.sharedAmount / editing.txn.amount) * 100)) : ''}
                         onChangeText={(text) => {
-                          const amt = text === '' ? null : Number(text);
+                          const pct = text === '' ? 0 : Number(text);
+                          const amt = Math.round(editing.txn.amount * pct / 100);
                           setEditing((prev) => prev ? { txn: { ...prev.txn, sharedAmount: amt } } : null);
                         }}
                         onBlur={async () => {
