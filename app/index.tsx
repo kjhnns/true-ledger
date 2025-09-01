@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, Menu, Portal, Snackbar, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
@@ -13,6 +13,7 @@ import { archiveStatement, createStatement, deleteStatement, listStatementsWithM
 import { fileFromShareUrl } from '../lib/share';
 import Settings from './settings';
 import UploadModal from './UploadModal';
+import { useFocusEffect } from '@react-navigation/native';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -119,17 +120,20 @@ export default function Index() {
   const [progress, setProgress] = useState<Record<string, number>>({});
   const showToast = (message: string) => setToast({ visible: true, message });
 
-  useEffect(() => {
-    (async () => {
-      const list = await listStatementsWithMeta();
-      setStatements(list);
-    })();
-  }, []);
-
-  const refreshStatements = async () => {
+  const refreshStatements = useCallback(async () => {
     const list = await listStatementsWithMeta();
     setStatements(list);
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshStatements();
+    }, [refreshStatements])
+  );
+
+  useEffect(() => {
+    refreshStatements();
+  }, [refreshStatements]);
 
   const pickFile = async () => {
     const res = await DocumentPicker.getDocumentAsync({

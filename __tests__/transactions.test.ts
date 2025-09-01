@@ -1,7 +1,7 @@
 jest.mock('expo-sqlite', () => require('../test-utils/sqliteMock').sqliteMock);
 
 import { createStatement, getStatement } from '../lib/statements';
-import { createTransaction, updateTransaction, listTransactions } from '../lib/transactions';
+import { createTransaction, updateTransaction, listTransactions, getReviewedAmountProgress } from '../lib/transactions';
 import sqliteMock from '../test-utils/sqliteMock';
 
 describe('transactions', () => {
@@ -64,5 +64,22 @@ describe('transactions', () => {
     await updateTransaction(t2.id, { reviewedAt: null });
     st = await getStatement(stmt.id);
     expect(st?.status).toBe('processed');
+  });
+
+  it('calculates reviewed amount progress', () => {
+    const txns = [
+      { amount: 100, reviewedAt: Date.now() },
+      { amount: 50, reviewedAt: null },
+      { amount: 25, reviewedAt: Date.now() },
+    ] as any;
+    const res = getReviewedAmountProgress(txns);
+    expect(res.total).toBe(175);
+    expect(res.reviewed).toBe(125);
+    expect(res.percent).toBeCloseTo(125 / 175);
+  });
+
+  it('handles empty transaction list', () => {
+    const res = getReviewedAmountProgress([]);
+    expect(res).toEqual({ total: 0, reviewed: 0, percent: 0 });
   });
 });

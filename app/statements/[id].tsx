@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Alert, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import {
   Button,
@@ -26,6 +26,7 @@ import {
   listTransactions,
   Transaction,
   updateTransaction,
+  getReviewedAmountProgress,
 } from '../../lib/transactions';
 import { getDefaultSharedPercent } from '../../lib/settings';
 
@@ -118,6 +119,22 @@ export default function StatementTransactions() {
     return ascending ? aVal - bVal : bVal - aVal;
   });
 
+  const progress = useMemo(
+    () => getReviewedAmountProgress(transactions),
+    [transactions]
+  );
+
+  const countPct = meta && meta.count ? (reviewedCount / meta.count) * 100 : 0;
+  const amountPct = progress.total
+    ? (progress.reviewed / progress.total) * 100
+    : 0;
+  const nf = meta
+    ? new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: meta.currency || 'USD',
+      })
+    : null;
+
   const toggleSort = (col: 'date' | 'amount') => {
     if (sortBy === col) {
       setAscending(!ascending);
@@ -185,15 +202,37 @@ export default function StatementTransactions() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      {meta && (
+      {meta && nf && (
         <View style={{ marginBottom: 16 }}>
-          <Text onPress={() => { setPromptEdit(meta.bankPrompt); setPromptModal(true); }} style={{ color: 'blue' }}>Bank: {meta.bank} ({meta.currency})</Text>
-          <Text>Uploaded: {formatDate(meta.uploadDate)}</Text>
-          <Text>
-            Date Range: {formatDate(meta.earliest)} - {formatDate(meta.latest)}
-          </Text>
-          <Text>Transactions: {meta.count}</Text>
-          <Text>Reviewed: {reviewedCount} / {meta.count}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View>
+              <Text
+                onPress={() => {
+                  setPromptEdit(meta.bankPrompt);
+                  setPromptModal(true);
+                }}
+                style={{ color: 'blue' }}
+              >
+                Bank: {meta.bank} ({meta.currency})
+              </Text>
+              <Text>Uploaded: {formatDate(meta.uploadDate)}</Text>
+              <Text>
+                Date Range: {formatDate(meta.earliest)} - {formatDate(meta.latest)}
+              </Text>
+              <Text>Transactions: {meta.count}</Text>
+              <Text>Total Amount: {nf.format(progress.total)}</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text>
+                Reviewed: {reviewedCount} / {meta.count} ({countPct.toFixed(1)}%)
+              </Text>
+              <Text>
+                Reviewed Amount: {nf.format(progress.reviewed)} / {nf.format(
+                  progress.total
+                )} ({amountPct.toFixed(1)}%)
+              </Text>
+            </View>
+          </View>
         </View>
       )}
       {transactions.length === 0 ? (
