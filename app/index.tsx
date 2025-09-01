@@ -6,7 +6,9 @@ import { Modal, ScrollView, TouchableOpacity, useWindowDimensions, View } from '
 import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, List, Menu, Portal, RadioButton, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
-import { archiveStatement, createDummyStatementWithTransactions, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
+import { archiveStatement, createStatement, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
+import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, SYSTEM_PROMPT_STORAGE_KEY, processStatementFile } from '../lib/openai';
+import * as SecureStore from 'expo-secure-store';
 import Settings from './settings';
 
 function StatusRow({ item }: { item: StatementMeta }) {
@@ -127,9 +129,30 @@ export default function Index() {
 
   const upload = async () => {
     if (!selectedBank || !file) return;
-    await createDummyStatementWithTransactions(selectedBank, file.name);
+    const stmt = await createStatement({
+      bankId: selectedBank,
+      uploadDate: Date.now(),
+      file: file.name,
+      status: 'new',
+    });
     await refreshStatements();
     setModalVisible(false);
+    const apiKey = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
+    const sysPrompt =
+      (await SecureStore.getItemAsync(SYSTEM_PROMPT_STORAGE_KEY)) ??
+      DEFAULT_SYSTEM_PROMPT;
+    const fileObj: any = {
+      uri: file.uri,
+      name: file.name,
+      type: file.mimeType || 'application/pdf',
+    };
+    processStatementFile({
+      statementId: stmt.id,
+      bankId: selectedBank,
+      file: fileObj,
+      apiKey: apiKey || '',
+      systemPrompt: sysPrompt,
+    }).catch((e) => console.error(e));
     setSelectedBank(null);
     setFile(null);
   };

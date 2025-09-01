@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
+import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, SYSTEM_PROMPT_STORAGE_KEY } from "../lib/openai";
 
-const STORAGE_KEY = "openai_api_key";
 const UPDATED_AT_KEY = "openai_api_key_updated_at";
 
 function formatDate(dateString: string | null) {
@@ -19,14 +19,19 @@ export default function Settings() {
   const [hasKey, setHasKey] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [prompt, setPrompt] = useState("");
   const theme = useTheme();
 
   useEffect(() => {
     (async () => {
-      const existing = await SecureStore.getItemAsync(STORAGE_KEY);
+      const existing = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
       const updated = await SecureStore.getItemAsync(UPDATED_AT_KEY);
+      const storedPrompt = await SecureStore.getItemAsync(
+        SYSTEM_PROMPT_STORAGE_KEY
+      );
       setHasKey(!!existing);
       setUpdatedAt(updated);
+      setPrompt(storedPrompt ?? DEFAULT_SYSTEM_PROMPT);
     })();
   }, []);
 
@@ -36,7 +41,7 @@ export default function Settings() {
       setError("That doesn’t look like an OpenAI key.");
       return;
     }
-    await SecureStore.setItemAsync(STORAGE_KEY, value);
+    await SecureStore.setItemAsync(OPENAI_KEY_STORAGE_KEY, value);
     const iso = new Date().toISOString();
     await SecureStore.setItemAsync(UPDATED_AT_KEY, iso);
     setHasKey(true);
@@ -47,14 +52,14 @@ export default function Settings() {
     Alert.alert(hasKey ? "Key updated." : "Key saved securely.");
   };
 
-  const handleRemove = () => {
+const handleRemove = () => {
     Alert.alert("Remove key?", "Are you sure you want to remove the stored key?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
         style: "destructive",
         onPress: async () => {
-          await SecureStore.deleteItemAsync(STORAGE_KEY);
+          await SecureStore.deleteItemAsync(OPENAI_KEY_STORAGE_KEY);
           await SecureStore.deleteItemAsync(UPDATED_AT_KEY);
           setHasKey(false);
           setUpdatedAt(null);
@@ -64,6 +69,11 @@ export default function Settings() {
         },
       },
     ]);
+};
+
+  const handlePromptSave = async () => {
+    await SecureStore.setItemAsync(SYSTEM_PROMPT_STORAGE_KEY, prompt);
+    Alert.alert('Prompt saved.');
   };
 
   if (!hasKey || editing) {
@@ -87,6 +97,16 @@ export default function Settings() {
         <Button mode="contained" onPress={handleSave}>
           {hasKey ? 'Save new key' : 'Save key'}
         </Button>
+        <View style={{ height: 32 }} />
+        <Text style={{ marginBottom: 8 }}>System prompt</Text>
+        <TextInput
+          mode="outlined"
+          multiline
+          value={prompt}
+          onChangeText={setPrompt}
+          style={{ marginBottom: 8 }}
+        />
+        <Button onPress={handlePromptSave}>Save prompt</Button>
       </View>
     );
   }
@@ -102,6 +122,16 @@ export default function Settings() {
       </Button>
       <View style={{ height: 8 }} />
       <Button onPress={handleRemove}>Remove key</Button>
+      <View style={{ height: 32 }} />
+      <Text style={{ marginBottom: 8 }}>System prompt</Text>
+      <TextInput
+        mode="outlined"
+        multiline
+        value={prompt}
+        onChangeText={setPrompt}
+        style={{ marginBottom: 8 }}
+      />
+      <Button onPress={handlePromptSave}>Save prompt</Button>
     </View>
   );
 }
