@@ -2,10 +2,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, View, useWindowDimensions } from 'react-native';
-import { BottomNavigation, Button, DataTable, Dialog, FAB, IconButton, List, Menu, Portal, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
+import { Modal, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, List, Menu, Portal, RadioButton, Text } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
-import { Entity } from '../lib/entities';
+import { Entity, listBankAccounts } from '../lib/entities';
 import { archiveStatement, createDummyStatementWithTransactions, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
 import Settings from './settings';
 
@@ -139,9 +139,11 @@ export default function Index() {
   };
 
   const StatementsRoute = () => {
-    const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
+  const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<import('../lib/entities').Entity[]>([]);
+  const [filterBankId, setFilterBankId] = useState<string | null>(null);
     const { width, height } = useWindowDimensions();
     const isLandscape = width > height;
 
@@ -153,74 +155,80 @@ export default function Index() {
     };
 
     const sorted = statements.slice().sort((a, b) => b.uploadDate - a.uploadDate);
-    const filtered = sorted.filter((s) =>
-      viewArchived === 'archived' ? s.archivedAt !== null : s.archivedAt === null
-    );
+    const filtered = sorted
+      .filter((s) => (viewArchived === 'archived' ? s.archivedAt !== null : s.archivedAt === null))
+      .filter((s) => (filterBankId ? s.bankId === filterBankId : true));
+
+    useEffect(() => {
+      (async () => {
+        const b = await listBankAccounts();
+        setBankAccounts(b);
+      })();
+    }, []);
 
     return (
-      <View style={{ flex: 1, padding: 16, paddingTop: 48 }}>
+      <View style={{ flex: 1, padding: 16 }}>
 
-        <SegmentedButtons
-          value={viewArchived}
-          onValueChange={(v) => setViewArchived(v as 'current' | 'archived')}
-          buttons={[{ value: 'current', label: 'Current' }, { value: 'archived', label: 'Archived' }]}
-          style={{ marginBottom: 12 }}
-        />
-
-        {filtered.length === 0 ? (
-          <Text>No statements</Text>
-        ) : (
-          <ScrollView>
-            <DataTable>
-              <DataTable.Header>
-                {isLandscape && <DataTable.Title>Created</DataTable.Title>}
-                <DataTable.Title>Bank</DataTable.Title>
-                <DataTable.Title>Date Range</DataTable.Title>
-                <DataTable.Title numeric>Txns</DataTable.Title>
-                <DataTable.Title>Status</DataTable.Title>
-                <DataTable.Title>Actions</DataTable.Title>
-              </DataTable.Header>
-              {filtered.map((item) => (
-                <DataTable.Row key={item.id} onPress={() => router.push(`/statements/${item.id}`)}>
-                  {isLandscape && (
-                    <DataTable.Cell>
-                      {new Date(item.uploadDate).toLocaleDateString()}
-                    </DataTable.Cell>
-                  )}
-                  <DataTable.Cell>{item.bankLabel}</DataTable.Cell>
-                  <DataTable.Cell>{formatRange(item.earliest, item.latest)}</DataTable.Cell>
-                  <DataTable.Cell numeric>{item.transactionCount}</DataTable.Cell>
-                  <DataTable.Cell>
-                    {/* compute latest status */}
-                    {(() => {
-                      const statusTimestamps: [string, number | null][] = [
-                        ['published', item.publishedAt],
-                        ['reviewed', item.reviewedAt],
-                        ['processed', item.processedAt],
-                        ['new', item.uploadDate],
-                      ];
-                      const latest = statusTimestamps.reduce((acc, cur) => (cur[1] && cur[1] > (acc[1] ?? 0) ? cur : acc), ['new', item.uploadDate]);
-                      const [label] = latest;
-                      const icon = label === 'published' ? 'check-circle' : label === 'reviewed' ? 'checkbox-marked-circle' : label === 'processed' ? 'progress-clock' : 'file-document-outline';
-                      const color = label === 'new' ? 'gray' : 'green';
-                      return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <MaterialCommunityIcons name={icon as any} size={18} color={color} />
-                          <Text style={{ marginLeft: 6 }}>{label}</Text>
-                        </View>
-                      );
-                    })()}
-                  </DataTable.Cell>
-                  <DataTable.Cell>
-                    <ActionMenu item={item} viewArchived={viewArchived} onRequestDelete={(id) => { setDeleteTarget(id); setConfirmVisible(true); }} refresh={refreshStatements} />
-                  </DataTable.Cell>
-                </DataTable.Row>
+        {/* Bank filter chips - top, intrinsic height */}
+        <View style={{ marginBottom: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Chip
+                mode={!filterBankId ? 'flat' : 'outlined'}
+                selected={!filterBankId}
+                onPress={() => setFilterBankId(null)}
+                style={{ marginRight: 8 }}
+              >
+                All
+              </Chip>
+              {bankAccounts.map((b) => (
+                <Chip
+                  key={b.id}
+                  mode={filterBankId === b.id ? 'flat' : 'outlined'}
+                  selected={filterBankId === b.id}
+                  onPress={() => setFilterBankId(filterBankId === b.id ? null : b.id)}
+                  style={{ marginRight: 8 }}
+                >
+                  {b.label}
+                </Chip>
               ))}
-            </DataTable>
+            </View>
           </ScrollView>
-        )}
+        </View>
 
-        <Portal>
+        {/* Statements table - takes remaining space and scrolls internally */}
+        <View style={{ flex: 1 }}>
+          {filtered.length === 0 ? (
+            <Text>No statements</Text>
+          ) : (
+            <ScrollView>
+                  {filtered.map((item) => (
+                    <Card key={item.id} style={{ marginBottom: 8 }} >
+                      <Card.Content>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <TouchableOpacity style={{ flex: 1 }} onPress={() => router.push(`/statements/${item.id}`)}>
+                            <Text style={{ fontWeight: '700' }}>{formatRange(item.earliest, item.latest)}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                              <Chip mode="outlined" style={{ marginRight: 8 }}>{item.bankLabel}</Chip>
+                              <Text style={{ color: 'gray' }}>{new Date(item.uploadDate).toLocaleDateString()}</Text>
+                            </View>
+                          </TouchableOpacity>
+                          <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
+                            <Text>{item.transactionCount} txns</Text>
+                            <View style={{ marginTop: 8 }}>
+                              <ActionMenu item={item} viewArchived={viewArchived} onRequestDelete={(id) => { setDeleteTarget(id); setConfirmVisible(true); }} refresh={refreshStatements} />
+                            </View>
+                          </View>
+                        </View>
+                      </Card.Content>
+                    </Card>
+                  ))}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* Dialog portal remains here */}
+  <Portal>
           <Dialog visible={confirmVisible} onDismiss={() => setConfirmVisible(false)}>
             <Dialog.Title>Confirm delete</Dialog.Title>
             <Dialog.Content>
@@ -269,7 +277,22 @@ export default function Index() {
           </View>
         </Modal>
 
-        <FAB icon="upload" onPress={openUploadModal} style={{ position: 'absolute', right: 16, bottom: 16 }} accessibilityLabel="Upload statement" />
+        {/* bottom controls: archived toggle and upload button - part of normal layout */}
+        <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button
+            mode={viewArchived === 'archived' ? 'contained' : 'outlined'}
+            icon={viewArchived === 'archived' ? 'archive-arrow-up' : 'archive'}
+            onPress={() => setViewArchived(viewArchived === 'archived' ? 'current' : 'archived')}
+            accessibilityLabel={viewArchived === 'archived' ? 'Show current statements' : 'Show archived statements'}
+            style={{ flex: 1, marginRight: 12 }}
+          >
+            {viewArchived === 'archived' ? 'Archived' : 'Current'}
+          </Button>
+
+          <Button mode="contained" icon="upload" onPress={openUploadModal}>
+            Upload
+          </Button>
+        </View>
 
       </View>
     );

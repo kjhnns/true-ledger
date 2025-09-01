@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { getDb } from './db';
 import { Currency, SUPPORTED_CURRENCIES } from './currencies';
+import { getDb } from './db';
 
 export interface Transaction {
   id: string;

@@ -5,7 +5,7 @@ let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 function ensureDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync('app_v2.db');
+    dbPromise = SQLite.openDatabaseAsync('app_v3.db');
   }
   return dbPromise!;
 }

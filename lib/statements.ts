@@ -166,17 +166,21 @@ export async function createDummyStatementWithTransactions(
       categories[Math.floor(Math.random() * categories.length)];
     const amount = Math.floor(Math.random() * 10000) + 1;
     const shared = Math.random() < 0.5;
-    await createTransaction({
-      statementId: statement.id,
-      recipientId: recipient.id,
-      senderId: bank.id,
-      createdAt: Date.now(),
-      amount,
-      currency: bank.currency,
-      shared,
-      sharedAmount: shared ? Math.floor(amount / 2) : null,
-      description: null,
-    });
+    try {
+      let txn = await createTransaction({
+        statementId: statement.id,
+        recipientId: recipient.id,
+        senderId: bank.id,
+        createdAt: Date.now(),
+        amount,
+        currency: bank.currency,
+        shared,
+        sharedAmount: shared ? Math.floor(amount / 2) : null,
+        description: null,
+      });
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+    }
   }
   return statement;
 }
