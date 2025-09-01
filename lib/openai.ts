@@ -14,7 +14,13 @@ try {
     setItemAsync: async (key: string, value: string) => { process.env[key] = value; },
   };
 }
-import OpenAI from 'openai';
+let OpenAI: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  OpenAI = require('openai');
+} catch (e) {
+  OpenAI = class {};
+}
 import { getDb } from './db';
 import { getEntity, listEntities, listExpenseCategories } from './entities';
 import { createTransaction } from './transactions';
@@ -278,25 +284,29 @@ Only return the JSON output and no explanations or any other decorative text, do
 export async function processStatementFile(options: {
   statementId: string;
   bankId: string;
-  file: any;
+  file?: any;
+  fileId?: string;
   apiKey: string;
   systemPrompt: string;
   onProgress?: (p: number) => void;
   signal?: AbortSignal;
 }) {
-  const { statementId, bankId, file, apiKey, systemPrompt, onProgress, signal } = options;
+  const { statementId, bankId, file, fileId: existingFileId, apiKey, systemPrompt, onProgress, signal } = options;
   const db = await getDb();
   try {
     if (!apiKey) throw new Error('missing api key');
     onProgress?.(0);
-    const fileId = await uploadFile(apiKey, file, signal);
-    console.log(fileId);
-    onProgress?.(0.25);
-    await db.runAsync(
-      'UPDATE statements SET external_file_id=? WHERE id=?',
-      fileId,
-      statementId
-    );
+    const fileId = existingFileId || (await uploadFile(apiKey, file, signal));
+    if (!existingFileId) {
+      onProgress?.(0.25);
+      await db.runAsync(
+        'UPDATE statements SET external_file_id=? WHERE id=?',
+        fileId,
+        statementId
+      );
+    } else {
+      onProgress?.(0.25);
+    }
     const bank = await getEntity(bankId);
     const cats = await listExpenseCategories();
 
@@ -380,8 +390,9 @@ export async function processStatementFile(options: {
       }
     }
     await db.runAsync(
-      'UPDATE statements SET status=? WHERE id=?',
+      'UPDATE statements SET status=?, processed_at=? WHERE id=?',
       'processed',
+      Date.now(),
       statementId
     );
   } catch (err) {

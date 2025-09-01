@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
 import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, SYSTEM_PROMPT_STORAGE_KEY } from "../lib/openai";
+import { DEFAULT_SHARED_PERCENT, getDefaultSharedPercent, setDefaultSharedPercent } from "../lib/settings";
 
 const UPDATED_AT_KEY = "openai_api_key_updated_at";
 
@@ -20,6 +21,7 @@ export default function Settings() {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [sharedPercent, setSharedPercent] = useState<number>(DEFAULT_SHARED_PERCENT);
   const theme = useTheme();
 
   useEffect(() => {
@@ -29,9 +31,11 @@ export default function Settings() {
       const storedPrompt = await SecureStore.getItemAsync(
         SYSTEM_PROMPT_STORAGE_KEY
       );
+      const percent = await getDefaultSharedPercent();
       setHasKey(!!existing);
       setUpdatedAt(updated);
       setPrompt(storedPrompt ?? DEFAULT_SYSTEM_PROMPT);
+      setSharedPercent(percent);
     })();
   }, []);
 
@@ -73,12 +77,13 @@ const handleRemove = () => {
 
   const handlePromptSave = async () => {
     await SecureStore.setItemAsync(SYSTEM_PROMPT_STORAGE_KEY, prompt);
-    Alert.alert('Prompt saved.');
+    await setDefaultSharedPercent(sharedPercent);
+    Alert.alert('Settings saved.');
   };
 
   if (!hasKey || editing) {
     return (
-      <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, justifyContent: 'center' }}>
         <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
         <TextInput
           mode="outlined"
@@ -106,13 +111,24 @@ const handleRemove = () => {
           onChangeText={setPrompt}
           style={{ marginBottom: 8 }}
         />
-        <Button onPress={handlePromptSave}>Save prompt</Button>
-      </View>
+        <Text style={{ marginBottom: 8 }}>Default shared percentage</Text>
+        <TextInput
+          mode="outlined"
+          keyboardType="numeric"
+          value={String(sharedPercent)}
+          onChangeText={(t) => setSharedPercent(Number(t) || 0)}
+          style={{ marginBottom: 4 }}
+        />
+        <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>
+          This will be the default shared value for all entries created.
+        </Text>
+        <Button onPress={handlePromptSave}>Save settings</Button>
+      </ScrollView>
     );
   }
 
   return (
-    <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, justifyContent: 'center' }}>
       <Text style={{ marginBottom: 8 }}>OpenAI API key</Text>
       <Text style={{ marginBottom: 16 }}>
         Key saved • Last updated {formatDate(updatedAt)}
@@ -131,8 +147,19 @@ const handleRemove = () => {
         onChangeText={setPrompt}
         style={{ marginBottom: 8 }}
       />
-      <Button onPress={handlePromptSave}>Save prompt</Button>
-    </View>
+      <Text style={{ marginBottom: 8 }}>Default shared percentage</Text>
+      <TextInput
+        mode="outlined"
+        keyboardType="numeric"
+        value={String(sharedPercent)}
+        onChangeText={(t) => setSharedPercent(Number(t) || 0)}
+        style={{ marginBottom: 4 }}
+      />
+      <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>
+        This will be the default shared value for all entries created.
+      </Text>
+      <Button onPress={handlePromptSave}>Save settings</Button>
+    </ScrollView>
   );
 }
 

@@ -40,11 +40,13 @@ function ActionMenu({
   viewArchived,
   onRequestDelete,
   refresh,
+  onReprocess,
 }: {
   item: StatementMeta;
   viewArchived: 'current' | 'archived';
   onRequestDelete: (id: string) => void;
   refresh: () => Promise<void>;
+  onReprocess: (item: StatementMeta) => void;
 }) {
   const [visible, setVisible] = useState(false);
   return (
@@ -62,10 +64,9 @@ function ActionMenu({
     >
       <Menu.Item
         leadingIcon="autorenew"
-        onPress={async () => {
+        onPress={() => {
           setVisible(false);
-          await reprocessStatement(item.id);
-          await refresh();
+          onReprocess(item);
         }}
         title="Reprocess"
       />
@@ -215,6 +216,8 @@ export default function Index() {
   const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    const [reprocessConfirm, setReprocessConfirm] = useState(false);
+    const [reprocessTarget, setReprocessTarget] = useState<StatementMeta | null>(null);
   const [bankAccounts, setBankAccounts] = useState<import('../lib/entities').Entity[]>([]);
   const [filterBankId, setFilterBankId] = useState<string | null>(null);
     const { width, height } = useWindowDimensions();
@@ -296,8 +299,9 @@ export default function Index() {
                           </TouchableOpacity>
                           <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
                             <Text>{item.transactionCount} records</Text>
+                            <Text style={{ fontSize: 12, color: 'gray' }}>{item.reviewedCount}/{item.transactionCount} reviewed</Text>
                             <View style={{ marginTop: 8 }}>
-                              <ActionMenu item={item} viewArchived={viewArchived} onRequestDelete={(id) => { setDeleteTarget(id); setConfirmVisible(true); }} refresh={refreshStatements} />
+                              <ActionMenu item={item} viewArchived={viewArchived} onRequestDelete={(id) => { setDeleteTarget(id); setConfirmVisible(true); }} refresh={refreshStatements} onReprocess={(stmt) => { setReprocessTarget(stmt); setReprocessConfirm(true); }} />
                             </View>
                           </View>
                         </View>
@@ -310,7 +314,7 @@ export default function Index() {
         </View>
 
         {/* Dialog portal remains here */}
-  <Portal>
+        <Portal>
           <Dialog visible={confirmVisible} onDismiss={() => setConfirmVisible(false)}>
             <Dialog.Title>Confirm delete</Dialog.Title>
             <Dialog.Content>
@@ -326,6 +330,64 @@ export default function Index() {
                   await refreshStatements();
                 }
               }}>Delete</Button>
+            </Dialog.Actions>
+          </Dialog>
+          <Dialog visible={reprocessConfirm} onDismiss={() => setReprocessConfirm(false)}>
+            <Dialog.Title>Reprocess statement</Dialog.Title>
+            <Dialog.Content>
+              <Text>Existing transactions will be dropped. Continue?</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setReprocessConfirm(false)}>Cancel</Button>
+              <Button onPress={async () => {
+                if (reprocessTarget) {
+                  await reprocessStatement(reprocessTarget.id);
+                  await refreshStatements();
+                  setReprocessConfirm(false);
+                  setModalScreen('processing');
+                  setProcessingLog('Queued for processing...\n');
+                  setProcessingStmtId(reprocessTarget.id);
+                  setProcessingCompleted(false);
+                  setProcessingAbortRequested(false);
+                  setModalVisible(true);
+                  setProgress((p) => ({ ...p, [reprocessTarget.id]: 0 }));
+                  const apiKey = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
+                  const sysPrompt = (await SecureStore.getItemAsync(SYSTEM_PROMPT_STORAGE_KEY)) ?? DEFAULT_SYSTEM_PROMPT;
+                  const controller = new AbortController();
+                  setProcessingAbortController(controller);
+                  processStatementFile({
+                    statementId: reprocessTarget.id,
+                    bankId: reprocessTarget.bankId,
+                    fileId: reprocessTarget.externalFileId || undefined,
+                    apiKey: apiKey || '',
+                    systemPrompt: sysPrompt,
+                    signal: controller.signal,
+                    onProgress: (p) => {
+                      setProgress((prev) => ({ ...prev, [reprocessTarget.id]: p }));
+                      setProcessingLog((l) => l + `Progress: ${(p * 100).toFixed(0)}%\n`);
+                    },
+                  })
+                    .then(async () => {
+                      setProcessingLog((l) => l + 'Processing completed\n');
+                      setProcessingCompleted(true);
+                      setProgress((prev) => {
+                        const { [reprocessTarget.id]: _, ...rest } = prev;
+                        return rest;
+                      });
+                      await refreshStatements();
+                    })
+                    .catch((e) => {
+                      setProcessingLog((l) => l + `Error: ${e?.message ?? String(e)}\n`);
+                      setProcessingCompleted(true);
+                      setProgress((prev) => {
+                        const { [reprocessTarget.id]: _, ...rest } = prev;
+                        return rest;
+                      });
+                      showToast(e.message || 'Processing failed');
+                      refreshStatements();
+                    });
+                }
+              }}>Reprocess</Button>
             </Dialog.Actions>
           </Dialog>
         </Portal>
