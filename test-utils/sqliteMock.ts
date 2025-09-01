@@ -174,6 +174,13 @@ export const sqliteMock = {
             row.status = status;
             row.reviewed_at = reviewed_at;
           }
+        } else if (sql.includes('processed_at')) {
+          const [status, processed_at, id] = params;
+          const row = tables.statements.find((r) => r.id === id);
+          if (row) {
+            row.status = status;
+            row.processed_at = processed_at;
+          }
         } else {
           const [status, id] = params;
           const row = tables.statements.find((r) => r.id === id);

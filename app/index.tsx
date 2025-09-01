@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
@@ -9,6 +10,7 @@ import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
 import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, processStatementFile, SYSTEM_PROMPT_STORAGE_KEY } from '../lib/openai';
 import { archiveStatement, createStatement, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
+import { fileFromShareUrl } from '../lib/share';
 import Settings from './settings';
 import UploadModal from './UploadModal';
 
@@ -211,6 +213,26 @@ export default function Index() {
   setProcessingAbortRequested(false);
   await loadBanksForModal(setBanks, setModalVisible);
   };
+
+  useEffect(() => {
+    const handleUrl = async (url: string | null) => {
+      if (!url) return;
+      if (!(url.startsWith('content://') || url.startsWith('file://'))) return;
+      await openUploadModal();
+      setSelectedBank(null);
+      setFile(fileFromShareUrl(url));
+    };
+
+    (async () => {
+      const initial = await Linking.getInitialURL();
+      await handleUrl(initial);
+    })();
+
+    const sub = Linking.addEventListener('url', (e) => {
+      handleUrl(e.url);
+    });
+    return () => sub.remove();
+  }, []);
 
   const StatementsRoute = () => {
   const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
