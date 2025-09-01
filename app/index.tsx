@@ -300,6 +300,12 @@ export default function Index() {
                   {b.label}
                 </Chip>
               ))}
+              <IconButton
+                icon="plus"
+                size={20}
+                onPress={() => router.push('/bank-accounts/new')}
+                accessibilityLabel="Add bank account"
+              />
             </View>
           </ScrollView>
         </View>

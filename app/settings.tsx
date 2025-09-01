@@ -29,8 +29,15 @@ function ManageButtons() {
       <Button
         mode="contained"
         onPress={() => router.push('/expense-categories')}
+        style={{ marginBottom: 8 }}
       >
         Manage expense categories
+      </Button>
+      <Button
+        mode="contained"
+        onPress={() => router.push('/income-savings')}
+      >
+        Manage income & savings
       </Button>
     </View>
   );
