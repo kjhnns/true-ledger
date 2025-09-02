@@ -1,14 +1,18 @@
-import { useLocalSearchParams, useNavigation, router } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
 import {
+  AnimatedFAB,
+  BottomSheetModal,
   Button,
   Card,
   Checkbox,
@@ -28,6 +32,7 @@ import {
   EntityCategory,
   getEntity,
   listEntities,
+  updateBankAccount,
 } from '../../lib/entities';
 import { getStatement, reprocessStatement } from '../../lib/statements';
 import {
@@ -81,6 +86,8 @@ export default function StatementTransactions() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingLog, setProcessingLog] = useState('');
   const [processingDone, setProcessingDone] = useState(false);
+  const [promptVisible, setPromptVisible] = useState(false);
+  const [promptText, setPromptText] = useState('');
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const theme = useTheme();
@@ -106,6 +113,15 @@ export default function StatementTransactions() {
     return ent.label;
   };
 
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const formatWithCategory = (entityId: string | null) => {
+    if (!entityId) return '';
+    const ent = entities.find((e) => e.id === entityId);
+    if (!ent) return '';
+    const label = formatLabelLocal(entityId);
+    return `${capitalize(ent.category)}: ${label}`;
+  };
+
   const handleMarkAllReviewed = async () => {
     if (!id) return;
     await markAllTransactionsReviewed(id);
@@ -116,7 +132,19 @@ export default function StatementTransactions() {
 
   const openBankPrompt = () => {
     if (!meta) return;
-    router.push({ pathname: '/bank-prompt', params: { bankId: meta.bankId } });
+    setPromptText(meta.bankPrompt);
+    setPromptVisible(true);
+  };
+
+  const saveBankPrompt = async () => {
+    if (!meta) return;
+    await updateBankAccount(meta.bankId, {
+      label: meta.bank,
+      prompt: promptText,
+      currency: meta.currency,
+    });
+    setMeta((m) => (m ? { ...m, bankPrompt: promptText } : m));
+    setPromptVisible(false);
   };
 
   const handleReprocess = () => {
@@ -147,8 +175,8 @@ export default function StatementTransactions() {
               apiKey: apiKey || '',
               systemPrompt: sysPrompt,
               onProgress: (p) => setProcessingProgress(p),
+              onLog: (m) => setProcessingLog((l) => l + m + '\n'),
             });
-            setProcessingLog((l) => l + 'done\n');
             setProcessingDone(true);
             const [stmt, list] = await Promise.all([
               getStatement(id),
@@ -405,6 +433,8 @@ export default function StatementTransactions() {
                   const isBankRecipient = item.recipientId === bankId;
                   const otherIsRecipient = isBankSender; // when bank is sender, other party is recipient
                   const subjectLabel = otherIsRecipient ? item.recipientLabel : item.senderLabel;
+                  const subjectEntityId = otherIsRecipient ? item.recipientId : item.senderId;
+                  const subjectText = formatWithCategory(subjectEntityId) || subjectLabel;
                   const displayAmountVal = item.shared ? (item.sharedAmount ?? item.amount) : item.amount;
                   const nf = new Intl.NumberFormat(undefined, { style: 'currency', currency: meta.currency || 'USD' });
                   const signed = isBankSender ? `- ${nf.format(displayAmountVal)}` : isBankRecipient ? `+ ${nf.format(displayAmountVal)}` : nf.format(displayAmountVal);
@@ -420,7 +450,7 @@ export default function StatementTransactions() {
                               />
                             </View>
                             <TouchableOpacity onPress={() => setEditing({ txn: item })} style={{ flex: 1 }}>
-                              <Text style={{ fontWeight: '700' }}>{subjectLabel || (otherIsRecipient ? item.recipientLabel : item.senderLabel) || '—'}</Text>
+                              <Text style={{ fontWeight: '700' }}>{subjectText || '—'}</Text>
                               <Text style={{ color: 'gray', marginTop: 4 }}>{item.description ?? '-'}</Text>
                             </TouchableOpacity>
                             <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
@@ -548,16 +578,24 @@ export default function StatementTransactions() {
 
                 <View style={{ marginTop: 12 }}>
                   <Text>Sender</Text>
-                  <TouchableOpacity onPress={() => openEntityPicker(editing.txn.id, 'sender')}>
-                    <Text style={{ color: 'blue', marginTop: 6 }}>{editing.txn.senderLabel || 'Set sender'}</Text>
-                  </TouchableOpacity>
+                  <Button
+                    mode="text"
+                    onPress={() => openEntityPicker(editing.txn.id, 'sender')}
+                    style={{ alignSelf: 'flex-start', marginTop: 6 }}
+                  >
+                    {formatWithCategory(editing.txn.senderId) || 'Set sender'}
+                  </Button>
                 </View>
 
                 <View style={{ marginTop: 12 }}>
                   <Text>Recipient</Text>
-                  <TouchableOpacity onPress={() => openEntityPicker(editing.txn.id, 'recipient')}>
-                    <Text style={{ color: 'blue', marginTop: 6 }}>{editing.txn.recipientLabel || 'Set recipient'}</Text>
-                  </TouchableOpacity>
+                  <Button
+                    mode="text"
+                    onPress={() => openEntityPicker(editing.txn.id, 'recipient')}
+                    style={{ alignSelf: 'flex-start', marginTop: 6 }}
+                  >
+                    {formatWithCategory(editing.txn.recipientId) || 'Set recipient'}
+                  </Button>
                 </View>
               </ScrollView>
             </View>
@@ -603,45 +641,81 @@ export default function StatementTransactions() {
             )}
           </ScrollView>
         </Modal>
-        <FAB.Group
-          open={fabOpen}
-          onStateChange={({ open }) => setFabOpen(open)}
-          icon={fabOpen ? 'close' : 'menu'}
-          actions={[
-            {
-              icon: 'pencil',
-              label: 'Edit bank prompt',
-              onPress: () => {
-                setFabOpen(false);
-                openBankPrompt();
+        <BottomSheetModal visible={promptVisible} onDismiss={() => setPromptVisible(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <View style={{ padding: 16 }}>
+              <TextInput
+                mode="outlined"
+                multiline
+                value={promptText}
+                onChangeText={setPromptText}
+                style={{ height: 128, marginBottom: 12 }}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <Button onPress={() => setPromptVisible(false)} style={{ marginRight: 8 }}>
+                  Cancel
+                </Button>
+                <Button mode="contained" onPress={saveBankPrompt}>
+                  Save
+                </Button>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </BottomSheetModal>
+        {!processingVisible && !editing && !picker && !promptVisible && !fabOpen && (
+          <AnimatedFAB
+            icon="menu"
+            label="Train classification and more"
+            extended
+            onPress={() => setFabOpen(true)}
+            style={{ position: 'absolute', right: 16, bottom: 16 }}
+          />
+        )}
+        {!processingVisible && !editing && !picker && !promptVisible && fabOpen && (
+          <FAB.Group
+            visible={fabOpen}
+            open={fabOpen}
+            onStateChange={({ open }) => setFabOpen(open)}
+            icon={fabOpen ? 'close' : 'menu'}
+            actions={[
+              {
+                icon: 'pencil',
+                label: 'Edit bank prompt',
+                onPress: () => {
+                  setFabOpen(false);
+                  openBankPrompt();
+                },
               },
-            },
-            {
-              icon: 'refresh',
-              label: 'Reprocess',
-              onPress: () => {
-                setFabOpen(false);
-                handleReprocess();
+              {
+                icon: 'refresh',
+                label: 'Reprocess',
+                onPress: () => {
+                  setFabOpen(false);
+                  handleReprocess();
+                },
               },
-            },
-            {
-              icon: 'check-all',
-              label: 'Mark reviewed',
-              onPress: () => {
-                setFabOpen(false);
-                handleMarkAllReviewed();
+              {
+                icon: 'check-all',
+                label: 'Mark reviewed',
+                onPress: () => {
+                  setFabOpen(false);
+                  handleMarkAllReviewed();
+                },
               },
-            },
-            {
-              icon: 'book',
-              label: 'Learn mode',
-              onPress: () => {
-                setFabOpen(false);
-                setLearnVisible(true);
+              {
+                icon: 'book',
+                label: 'Learn mode',
+                onPress: () => {
+                  setFabOpen(false);
+                  setLearnVisible(true);
+                },
               },
-            },
-          ]}
-        />
+            ]}
+          />
+        )}
       </Portal>
     </View>
   );

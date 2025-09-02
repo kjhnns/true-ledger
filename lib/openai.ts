@@ -293,16 +293,19 @@ export async function processStatementFile(options: {
   apiKey: string;
   systemPrompt: string;
   onProgress?: (p: number) => void;
+  onLog?: (m: string) => void;
   signal?: AbortSignal;
 }) {
-  const { statementId, bankId, file, fileId: existingFileId, apiKey, systemPrompt, onProgress, signal } = options;
+  const { statementId, bankId, file, fileId: existingFileId, apiKey, systemPrompt, onProgress, onLog, signal } = options;
   const db = await getDb();
   try {
     if (!apiKey) throw new Error('missing api key');
     onProgress?.(0);
+    onLog?.('uploading file');
     const fileId = existingFileId || (await uploadFile(apiKey, file, signal));
     if (!existingFileId) {
       onProgress?.(0.25);
+      onLog?.('file uploaded');
       await db.runAsync(
         'UPDATE statements SET external_file_id=? WHERE id=?',
         fileId,
@@ -335,9 +338,11 @@ export async function processStatementFile(options: {
     ]
       .filter(Boolean)
       .join('\n');
-      console.log('PROMPT', prompt);
-  const thread = await createThread(apiKey, fileId, prompt, signal);
-    console.log(thread)
+    console.log('PROMPT', prompt);
+    onLog?.('creating thread');
+    const thread = await createThread(apiKey, fileId, prompt, signal);
+    onLog?.('thread created');
+    console.log(thread);
     onProgress?.(0.5);
     const txns = thread.transactions ?? [];
     const total = txns.length;
@@ -354,7 +359,8 @@ export async function processStatementFile(options: {
 
       for (let i = 0; i < total; i++) {
         const t = txns[i];
-        console.log("adding transaction");
+        console.log('adding transaction');
+        onLog?.(`adding transaction ${i + 1} of ${total}`);
 
         // Resolve category -> entity. The assistant is instructed to return the
         // entity id where possible. Support both id and label fallback.
@@ -391,6 +397,7 @@ export async function processStatementFile(options: {
           sharedAmount: t.isShared ? Math.round(t.amount / 2) : null,
         });
         onProgress?.(0.5 + ((i + 1) / total) * 0.5);
+        onLog?.(`processed ${i + 1}/${total}`);
       }
     }
     await db.runAsync(
@@ -399,6 +406,7 @@ export async function processStatementFile(options: {
       Date.now(),
       statementId
     );
+    onLog?.('done');
   } catch (err) {
     await db.runAsync('UPDATE statements SET status=? WHERE id=?', 'error', statementId);
     throw err;

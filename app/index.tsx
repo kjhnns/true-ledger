@@ -100,9 +100,24 @@ export default function Index() {
   const router = useRouter();
   const [navIndex, setNavIndex] = useState(0);
   const [navRoutes] = useState([
-    { key: 'import', title: 'Import', icon: 'file-import' },
-    { key: 'analysis', title: 'Analysis', icon: 'chart-bar' },
-    { key: 'settings', title: 'Settings', icon: 'cog' },
+    {
+      key: 'import',
+      title: 'Import',
+      focusedIcon: 'file-import',
+      unfocusedIcon: 'file-import-outline',
+    },
+    {
+      key: 'analysis',
+      title: 'Analysis',
+      focusedIcon: 'chart-bar',
+      unfocusedIcon: 'chart-bar',
+    },
+    {
+      key: 'settings',
+      title: 'Settings',
+      focusedIcon: 'cog',
+      unfocusedIcon: 'cog-outline',
+    },
   ]);
   const [statements, setStatements] = useState<StatementMeta[]>([]);
   const [banks, setBanks] = useState<Entity[]>([]);
