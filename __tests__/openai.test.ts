@@ -122,5 +122,26 @@ describe('openai processing', () => {
     const input2 = createResponseMock.mock.calls[0][0].input;
     expect(input2.startsWith(`${DEFAULT_LEARN_PROMPT}\nbank`)).toBe(true);
   });
+
+  test('learnFromTransactions logs prompt with transactions', async () => {
+    const logs: string[] = [];
+    await learnFromTransactions({
+      bankPrompt: 'bank',
+      basePrompt: 'base',
+      transactions: [
+        {
+          description: 'd',
+          amount: 1,
+          shared: false,
+          category: 'c',
+          type: 'debit',
+        },
+      ],
+      apiKey: 'sk',
+      onLog: (m) => logs.push(m),
+    });
+    const expected = 'base\nbank\nTxn 1: description="d" amount=1 shared=false category="c" type=debit\n\n';
+    expect(logs).toContain(expected);
+  });
 });
 
