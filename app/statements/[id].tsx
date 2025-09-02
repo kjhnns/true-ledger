@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import {
   AnimatedFAB,
-  BottomSheetModal,
   Button,
   Card,
   Checkbox,
@@ -34,6 +33,7 @@ import {
   listEntities,
   updateBankAccount,
 } from '../../lib/entities';
+import { Currency } from '../../lib/currencies';
 import { getStatement, reprocessStatement } from '../../lib/statements';
 import {
   listTransactions,
@@ -72,7 +72,7 @@ export default function StatementTransactions() {
     bank: string;
     bankId: string;
     bankPrompt: string;
-    currency: string;
+    currency: Currency;
     count: number;
     externalFileId: string | null;
   } | null>(null);
@@ -244,7 +244,7 @@ export default function StatementTransactions() {
           bank: bank?.label ?? '',
           bankId: stmt.bankId,
           bankPrompt: bank?.prompt ?? '',
-          currency: bank?.currency ?? '',
+          currency: bank?.currency ?? 'USD',
           count: list.length,
           externalFileId: stmt.externalFileId ?? null,
         });
@@ -641,30 +641,37 @@ export default function StatementTransactions() {
             )}
           </ScrollView>
         </Modal>
-        <BottomSheetModal visible={promptVisible} onDismiss={() => setPromptVisible(false)}>
+        <Modal
+          visible={promptVisible}
+          onDismiss={() => setPromptVisible(false)}
+          contentContainerStyle={{
+            backgroundColor: theme.colors.background,
+            padding: 16,
+            margin: 20,
+            borderRadius: 12,
+          }}
+        >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ flex: 1 }}
           >
-            <View style={{ padding: 16 }}>
-              <TextInput
-                mode="outlined"
-                multiline
-                value={promptText}
-                onChangeText={setPromptText}
-                style={{ height: 128, marginBottom: 12 }}
-              />
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                <Button onPress={() => setPromptVisible(false)} style={{ marginRight: 8 }}>
-                  Cancel
-                </Button>
-                <Button mode="contained" onPress={saveBankPrompt}>
-                  Save
-                </Button>
-              </View>
+            <TextInput
+              mode="outlined"
+              multiline
+              value={promptText}
+              onChangeText={setPromptText}
+              style={{ height: 128, marginBottom: 12 }}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <Button onPress={() => setPromptVisible(false)} style={{ marginRight: 8 }}>
+                Cancel
+              </Button>
+              <Button mode="contained" onPress={saveBankPrompt}>
+                Save
+              </Button>
             </View>
           </KeyboardAvoidingView>
-        </BottomSheetModal>
+        </Modal>
         {!processingVisible && !editing && !picker && !promptVisible && !fabOpen && (
           <AnimatedFAB
             icon="menu"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, View, TouchableOpacity } from 'react-native';
 import { Button, Checkbox, Modal, Portal, ProgressBar, Text } from 'react-native-paper';
+import { Currency } from '../lib/currencies';
 import * as SecureStore from 'expo-secure-store';
 import {
   OPENAI_KEY_STORAGE_KEY,
@@ -13,7 +14,7 @@ import { LearnTxn, prepareLearningTransactions } from '../lib/learn';
 
 export type LearnModalProps = {
   visible: boolean;
-  bank: { id: string; prompt: string; label: string; currency: string };
+  bank: { id: string; prompt: string; label: string; currency: Currency };
   transactions: LearnTxn[];
   onDismiss: () => void;
   onComplete: (prompt: string) => void;
