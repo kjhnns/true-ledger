@@ -21,24 +21,24 @@ export type ExpenseCategory = Entity;
 export const entitySchema = z.object({
   label: z.string().min(1, 'Label is required'),
   category: z.enum(['bank', 'expense', 'income', 'savings']),
-  prompt: z.string().min(1, 'Prompt is required'),
+  prompt: z.string().optional().default(''),
   parentId: z.string().nullable().optional(),
   currency: z.enum(SUPPORTED_CURRENCIES),
 });
 
 export type EntityInput = z.infer<typeof entitySchema>;
 
-export const bankAccountSchema = entitySchema.pick({
-  label: true,
-  prompt: true,
-  currency: true,
+export const bankAccountSchema = z.object({
+  label: z.string().min(1, 'Label is required'),
+  prompt: z.string().optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES),
 });
 export type BankAccountInput = z.infer<typeof bankAccountSchema>;
 
-export const expenseCategorySchema = entitySchema.pick({
-  label: true,
-  prompt: true,
-  parentId: true,
+export const expenseCategorySchema = z.object({
+  label: z.string().min(1, 'Label is required'),
+  prompt: z.string().min(1, 'Prompt is required'),
+  parentId: z.string().nullable().optional(),
 });
 export type ExpenseCategoryInput = z.infer<typeof expenseCategorySchema>;
 
@@ -140,12 +140,22 @@ export async function getBankAccount(id: string) {
 
 export async function createBankAccount(input: BankAccountInput) {
   const parsed = bankAccountSchema.parse(input);
-  return createEntity({ ...parsed, category: 'bank', parentId: null });
+  return createEntity({
+    ...parsed,
+    prompt: parsed.prompt ?? '',
+    category: 'bank',
+    parentId: null,
+  });
 }
 
 export async function updateBankAccount(id: string, input: BankAccountInput) {
   const parsed = bankAccountSchema.parse(input);
-  return updateEntity(id, { ...parsed, category: 'bank', parentId: null });
+  return updateEntity(id, {
+    ...parsed,
+    prompt: parsed.prompt ?? '',
+    category: 'bank',
+    parentId: null,
+  });
 }
 
 export async function deleteBankAccount(id: string) {

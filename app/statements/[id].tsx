@@ -1,10 +1,8 @@
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, router } from 'expo-router';
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
@@ -26,13 +24,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 import ProcessingModal from '../ProcessingModal';
-import {
-  Entity,
-  EntityCategory,
-  getEntity,
-  listEntities,
-  updateBankAccount,
-} from '../../lib/entities';
+import { Entity, EntityCategory, getEntity, listEntities } from '../../lib/entities';
 import { Currency } from '../../lib/currencies';
 import { getStatement, reprocessStatement } from '../../lib/statements';
 import {
@@ -86,8 +78,6 @@ export default function StatementTransactions() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingLog, setProcessingLog] = useState('');
   const [processingDone, setProcessingDone] = useState(false);
-  const [promptVisible, setPromptVisible] = useState(false);
-  const [promptText, setPromptText] = useState('');
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const theme = useTheme();
@@ -132,19 +122,7 @@ export default function StatementTransactions() {
 
   const openBankPrompt = () => {
     if (!meta) return;
-    setPromptText(meta.bankPrompt);
-    setPromptVisible(true);
-  };
-
-  const saveBankPrompt = async () => {
-    if (!meta) return;
-    await updateBankAccount(meta.bankId, {
-      label: meta.bank,
-      prompt: promptText,
-      currency: meta.currency,
-    });
-    setMeta((m) => (m ? { ...m, bankPrompt: promptText } : m));
-    setPromptVisible(false);
+    router.push({ pathname: '/bank-prompt', params: { bankId: meta.bankId } });
   };
 
   const handleReprocess = () => {
@@ -641,47 +619,14 @@ export default function StatementTransactions() {
             )}
           </ScrollView>
         </Modal>
-        <Modal
-          visible={promptVisible}
-          onDismiss={() => setPromptVisible(false)}
-          contentContainerStyle={{
-            backgroundColor: theme.colors.background,
-            padding: 16,
-            margin: 20,
-            borderRadius: 12,
-          }}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={{ flex: 1 }}
-          >
-            <TextInput
-              mode="outlined"
-              multiline
-              value={promptText}
-              onChangeText={setPromptText}
-              style={{ height: 128, marginBottom: 12 }}
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <Button onPress={() => setPromptVisible(false)} style={{ marginRight: 8 }}>
-                Cancel
-              </Button>
-              <Button mode="contained" onPress={saveBankPrompt}>
-                Save
-              </Button>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
-        {!processingVisible && !editing && !picker && !promptVisible && !fabOpen && (
+        {!processingVisible && !editing && !picker && !fabOpen && (
           <AnimatedFAB
             icon="menu"
-            label="Train classification and more"
-            extended
             onPress={() => setFabOpen(true)}
             style={{ position: 'absolute', right: 16, bottom: 16 }}
           />
         )}
-        {!processingVisible && !editing && !picker && !promptVisible && fabOpen && (
+        {!processingVisible && !editing && !picker && fabOpen && (
           <FAB.Group
             visible={fabOpen}
             open={fabOpen}
