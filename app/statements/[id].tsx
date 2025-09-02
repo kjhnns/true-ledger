@@ -1,6 +1,14 @@
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useState, useMemo } from 'react';
-import { Alert, ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import {
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import {
   Button,
   Card,
@@ -32,7 +40,8 @@ import {
   markAllTransactionsReviewed,
 } from '../../lib/transactions';
 import { getDefaultSharedPercent } from '../../lib/settings';
-import LearnModal, { LearnTxn } from '../LearnModal';
+import LearnModal from '../LearnModal';
+import { LearnTxn } from '../../lib/learn';
 import * as SecureStore from 'expo-secure-store';
 import {
   OPENAI_KEY_STORAGE_KEY,
@@ -417,22 +426,45 @@ export default function StatementTransactions() {
         />
       )}
       <Portal>
-        <Modal visible={promptModal} onDismiss={() => setPromptModal(false)} contentContainerStyle={{ backgroundColor: theme.colors.background, padding: 12, margin: 20, borderRadius: 12, height: 300 }}>
-          <Text style={{ marginBottom: 8 }}>Edit bank prompt</Text>
-          <TextInput
-            mode="outlined"
-            multiline
-            value={promptEdit}
-            onChangeText={setPromptEdit}
-            style={{ marginBottom: 8 }}
-          />
-          <Button onPress={async () => {
-            if (!meta) return;
-            await updateBankAccount(meta.bankId, { label: meta.bank, prompt: promptEdit, currency: meta.currency });
-            setMeta((m) => m ? { ...m, bankPrompt: promptEdit } : m);
-            setPromptModal(false);
-          }}>Save</Button>
-        </Modal>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <Modal
+            visible={promptModal}
+            onDismiss={() => setPromptModal(false)}
+            contentContainerStyle={{
+              backgroundColor: theme.colors.background,
+              padding: 12,
+              margin: 20,
+              borderRadius: 12,
+              height: 300,
+            }}
+          >
+            <Text style={{ marginBottom: 8 }}>Edit bank prompt</Text>
+            <TextInput
+              mode="outlined"
+              multiline
+              value={promptEdit}
+              onChangeText={setPromptEdit}
+              style={{ marginBottom: 8 }}
+            />
+            <Button
+              onPress={async () => {
+                if (!meta) return;
+                await updateBankAccount(meta.bankId, {
+                  label: meta.bank,
+                  prompt: promptEdit,
+                  currency: meta.currency,
+                });
+                setMeta((m) => (m ? { ...m, bankPrompt: promptEdit } : m));
+                setPromptModal(false);
+              }}
+            >
+              Save
+            </Button>
+          </Modal>
+        </KeyboardAvoidingView>
         <Modal
           visible={processingVisible}
           dismissable={false}

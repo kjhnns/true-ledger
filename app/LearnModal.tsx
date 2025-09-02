@@ -9,17 +9,7 @@ import {
   learnFromTransactions,
 } from '../lib/openai';
 import { updateBankAccount } from '../lib/entities';
-
-export type LearnTxn = {
-  id: string;
-  description: string | null;
-  amount: number;
-  shared: boolean;
-  senderId: string | null;
-  recipientId: string | null;
-  senderLabel: string;
-  recipientLabel: string;
-};
+import { LearnTxn, prepareLearningTransactions } from '../lib/learn';
 
 export type LearnModalProps = {
   visible: boolean;
@@ -68,15 +58,7 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
     const base =
       (await SecureStore.getItemAsync(LEARN_PROMPT_STORAGE_KEY)) ??
       DEFAULT_LEARN_PROMPT;
-    const list = transactions
-      .filter((t) => selected.has(t.id))
-      .map((t) => ({
-        description: t.description,
-        amount: t.amount,
-        shared: t.shared,
-        category: t.senderId === bank.id ? t.recipientLabel : t.senderLabel,
-        type: t.senderId === bank.id ? 'debit' as const : 'credit' as const,
-      }));
+    const list = prepareLearningTransactions(bank.id, transactions, selected);
     const ac = new AbortController();
     setController(ac);
     try {
