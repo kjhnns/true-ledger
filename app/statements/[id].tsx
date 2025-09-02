@@ -17,13 +17,13 @@ import {
   List,
   Modal,
   Portal,
-  ProgressBar,
   SegmentedButtons,
   Switch,
   Text,
   TextInput,
   useTheme,
 } from 'react-native-paper';
+import ProcessingModal from '../ProcessingModal';
 import {
   Entity,
   EntityCategory,
@@ -426,20 +426,20 @@ export default function StatementTransactions() {
         />
       )}
       <Portal>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
+        <Modal
+          visible={promptModal}
+          onDismiss={() => setPromptModal(false)}
+          contentContainerStyle={{
+            backgroundColor: theme.colors.background,
+            padding: 12,
+            margin: 20,
+            borderRadius: 12,
+            maxHeight: height * 0.8,
+          }}
         >
-          <Modal
-            visible={promptModal}
-            onDismiss={() => setPromptModal(false)}
-            contentContainerStyle={{
-              backgroundColor: theme.colors.background,
-              padding: 12,
-              margin: 20,
-              borderRadius: 12,
-              height: 300,
-            }}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
           >
             <Text style={{ marginBottom: 8 }}>Edit bank prompt</Text>
             <TextInput
@@ -463,20 +463,15 @@ export default function StatementTransactions() {
             >
               Save
             </Button>
-          </Modal>
-        </KeyboardAvoidingView>
-        <Modal
-          visible={processingVisible}
-          dismissable={false}
-          contentContainerStyle={{ backgroundColor: theme.colors.background, padding: 12, margin: 20, borderRadius: 12 }}
-        >
-          <Text style={{ marginBottom: 8 }}>Reprocessing</Text>
-          <ProgressBar progress={processingProgress} style={{ marginBottom: 8 }} />
-          <ScrollView style={{ maxHeight: 200, marginBottom: 8 }}>
-            <Text selectable style={{ fontFamily: 'monospace', fontSize: 12 }}>{processingLog}</Text>
-          </ScrollView>
-          <Button onPress={() => setProcessingVisible(false)} disabled={!processingDone}>Close</Button>
+          </KeyboardAvoidingView>
         </Modal>
+        <ProcessingModal
+          visible={processingVisible}
+          log={processingLog}
+          progress={processingProgress}
+          done={processingDone}
+          onClose={() => setProcessingVisible(false)}
+        />
         <Modal
           visible={!!editing}
           onDismiss={() => setEditing(null)}
