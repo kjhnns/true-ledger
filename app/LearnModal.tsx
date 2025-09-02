@@ -72,7 +72,7 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
         signal: ac.signal,
       });
       await updateBankAccount(bank.id, { label: bank.label, prompt: newPrompt, currency: bank.currency });
-      setLog((l) => l + 'saved prompt\n');
+      setLog((l) => l + 'saved prompt\n' + newPrompt + '\n');
       setCompleted(true);
       onComplete(newPrompt);
     } catch (e: any) {
@@ -130,7 +130,9 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
             </View>
             <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
               <Button mode="outlined" onPress={abort}>Abort</Button>
-              <Button mode="contained" onPress={onDismiss}>{completed ? 'Close' : 'Wait'}</Button>
+              <Button mode="contained" onPress={onDismiss} disabled={!completed}>
+                {completed ? 'Close' : 'Wait'}
+              </Button>
             </View>
           </View>
         )}
