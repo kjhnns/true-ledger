@@ -99,7 +99,8 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
                 const checked = selected.has(t.id);
                 const isBankSender = t.senderId === bank.id;
                 const subjectLabel = isBankSender ? t.recipientLabel : t.senderLabel;
-                const signed = isBankSender ? `- ${nf.format(t.amount)}` : `+ ${nf.format(t.amount)}`;
+                const amt = t.shared ? t.sharedAmount ?? t.amount : t.amount;
+                const signed = isBankSender ? `- ${nf.format(amt)}` : `+ ${nf.format(amt)}`;
                 return (
                   <TouchableOpacity key={t.id} onPress={() => toggle(t.id)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                     <Checkbox status={checked ? 'checked' : 'unchecked'} />
@@ -107,7 +108,10 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
                       <Text style={{ fontWeight: '700' }}>{subjectLabel || '-'}</Text>
                       <Text style={{ color: 'gray' }}>{t.description || '-'}</Text>
                     </View>
-                    <Text>{signed}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {t.shared && <Text style={{ marginRight: 6, color: 'gray' }}>(shared)</Text>}
+                      <Text>{signed}</Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
