@@ -45,7 +45,7 @@ export const DEFAULT_SYSTEM_PROMPT = `You are a precise financial data parser. E
 
 export const LEARN_PROMPT_STORAGE_KEY = 'learn_prompt';
 export const DEFAULT_LEARN_PROMPT =
-  'Concise and without any formatting. update the following prompt for a bank transaction parsing service so that the following mappings are learned as the golden data.';
+  'Append the following transactions such that it represents a golden data set. No formatting just list them out with classifications to have some specific examples. Drop the transaction number. Dedupe if there are the same entries. prefix the examples with: these are golden set examples that are correctly classified';
 
 async function uploadFile(apiKey: string, file: any, signal?: AbortSignal, onLog?: (m: string) => void): Promise<string> {
   // Use the installed OpenAI SDK (imported at module top). If the provided

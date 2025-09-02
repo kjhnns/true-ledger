@@ -1,13 +1,12 @@
-import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { useEffect, useState, useMemo } from 'react';
+import { useLocalSearchParams, useNavigation, router } from 'expo-router';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Alert,
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
   View,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import {
   Button,
@@ -29,7 +28,6 @@ import {
   EntityCategory,
   getEntity,
   listEntities,
-  updateBankAccount,
 } from '../../lib/entities';
 import { getStatement, reprocessStatement } from '../../lib/statements';
 import {
@@ -74,8 +72,6 @@ export default function StatementTransactions() {
     externalFileId: string | null;
   } | null>(null);
   const [reviewedCount, setReviewedCount] = useState(0);
-  const [promptModal, setPromptModal] = useState(false);
-  const [promptEdit, setPromptEdit] = useState('');
   const [defaultPercent, setDefaultPercent] = useState(50);
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [ascending, setAscending] = useState(false);
@@ -120,8 +116,7 @@ export default function StatementTransactions() {
 
   const openBankPrompt = () => {
     if (!meta) return;
-    setPromptEdit(meta.bankPrompt);
-    setPromptModal(true);
+    router.push({ pathname: '/bank-prompt', params: { bankId: meta.bankId } });
   };
 
   const handleReprocess = () => {
@@ -228,6 +223,18 @@ export default function StatementTransactions() {
       }
     })();
   }, [id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!meta?.bankId) return;
+      (async () => {
+        const bank = await getEntity(meta.bankId);
+        if (bank) {
+          setMeta((m) => (m ? { ...m, bankPrompt: bank.prompt ?? m.bankPrompt } : m));
+        }
+      })();
+    }, [meta?.bankId])
+  );
 
   useEffect(() => {
     (async () => {
@@ -442,45 +449,6 @@ export default function StatementTransactions() {
         />
       )}
       <Portal>
-        <Modal
-          visible={promptModal}
-          onDismiss={() => setPromptModal(false)}
-          contentContainerStyle={{
-            backgroundColor: theme.colors.background,
-            padding: 12,
-            margin: 20,
-            borderRadius: 12,
-            maxHeight: height * 0.8,
-          }}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
-          >
-            <Text style={{ marginBottom: 8 }}>Edit bank prompt</Text>
-            <TextInput
-              mode="outlined"
-              multiline
-              value={promptEdit}
-              onChangeText={setPromptEdit}
-              style={{ marginBottom: 8 }}
-            />
-            <Button
-              onPress={async () => {
-                if (!meta) return;
-                await updateBankAccount(meta.bankId, {
-                  label: meta.bank,
-                  prompt: promptEdit,
-                  currency: meta.currency,
-                });
-                setMeta((m) => (m ? { ...m, bankPrompt: promptEdit } : m));
-                setPromptModal(false);
-              }}
-            >
-              Save
-            </Button>
-          </KeyboardAvoidingView>
-        </Modal>
         <ProcessingModal
           visible={processingVisible}
           log={processingLog}
