@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 import { getEntity, updateBankAccount } from '../lib/entities';
+import { Currency } from '../lib/currencies';
 
 export default function EditBankPrompt() {
   const { bankId } = useLocalSearchParams<{ bankId: string }>();
   const [label, setLabel] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [currency, setCurrency] = useState('');
+  const [currency, setCurrency] = useState<Currency>('USD');
 
   useEffect(() => {
     (async () => {
