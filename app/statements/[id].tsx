@@ -411,13 +411,13 @@ export default function StatementTransactions() {
         <LearnModal
           visible={learnVisible}
           bank={{ id: meta.bankId, prompt: meta.bankPrompt, label: meta.bank, currency: meta.currency }}
-          transactions={transactions as unknown as LearnTxn[]}
+          transactions={sorted as unknown as LearnTxn[]}
           onDismiss={() => setLearnVisible(false)}
           onComplete={(p) => setMeta((m) => (m ? { ...m, bankPrompt: p } : m))}
         />
       )}
       <Portal>
-        <Modal visible={promptModal} onDismiss={() => setPromptModal(false)} contentContainerStyle={{ backgroundColor: theme.colors.background, padding: 12, margin: 20, borderRadius: 12 }}>
+        <Modal visible={promptModal} onDismiss={() => setPromptModal(false)} contentContainerStyle={{ backgroundColor: theme.colors.background, padding: 12, margin: 20, borderRadius: 12, height: 300 }}>
           <Text style={{ marginBottom: 8 }}>Edit bank prompt</Text>
           <TextInput
             mode="outlined"

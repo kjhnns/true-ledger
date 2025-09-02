@@ -430,6 +430,7 @@ export async function learnFromTransactions(options: {
     `Txn ${i + 1}: description="${t.description ?? ''}" amount=${t.amount} shared=${t.shared} category="${t.category ?? ''}" type=${t.type}`
   );
   const prompt = [learnPrompt, bankPrompt, ...txLines].join('\n');
+  onLog?.(prompt + '\n\n');
   onProgress?.(0.25);
   onLog?.('prompt built; initializing OpenAI client');
   console.log('learnFromTransactions: prompt built');
