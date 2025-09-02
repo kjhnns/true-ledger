@@ -308,6 +308,22 @@ export default function StatementTransactions() {
     setReviewedCount((c) => c + (reviewedAt ? 1 : -1));
   };
 
+  const markEditingReviewed = async () => {
+    if (!editing) return;
+    if (!editing.txn.reviewedAt) {
+      const updated = await updateTransaction(editing.txn.id, {
+        reviewedAt: Date.now(),
+      });
+      setTransactions((prev) =>
+        prev.map((t) =>
+          t.id === editing.txn.id ? { ...t, reviewedAt: updated.reviewedAt } : t
+        )
+      );
+      setReviewedCount((c) => c + 1);
+    }
+    setEditing(null);
+  };
+
   const openEntityPicker = (txnId: string, field: 'sender' | 'recipient') => {
     setPicker({ txnId, field });
   };
@@ -487,7 +503,7 @@ export default function StatementTransactions() {
             <View style={{ padding: 8 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 18, fontWeight: '700' }}>Edit transaction</Text>
-                <Button onPress={() => setEditing(null)}>Dismiss</Button>
+                <Button onPress={markEditingReviewed}>Mark reviewed</Button>
               </View>
               <ScrollView>
                 <View style={{ marginTop: 12 }}>

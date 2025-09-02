@@ -3,6 +3,8 @@ export type LearnTxn = {
   description: string | null;
   amount: number;
   shared: boolean;
+  /** Portion of the amount that is shared, if applicable */
+  sharedAmount?: number | null;
   senderId: string | null;
   recipientId: string | null;
   senderLabel: string;
