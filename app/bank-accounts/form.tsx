@@ -23,7 +23,7 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
   const handleSave = async () => {
     const input: BankAccountInput = {
       label: label.trim(),
-      prompt: prompt.trim(),
+      prompt: prompt.trim() || undefined,
       currency: currency as any,
     };
     const result = bankAccountSchema.safeParse(input);
@@ -52,8 +52,12 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
           value={prompt}
           onChangeText={setPrompt}
           multiline
-          style={{ marginBottom: 12, height: 128 }}
+          style={{ marginBottom: 4, height: 128 }}
         />
+        <Text style={{ marginBottom: 12, color: theme.colors.onSurfaceVariant }}>
+          List specifics that are important to consider for the processing of the
+          file.
+        </Text>
         <Text style={{ marginBottom: 4 }}>Currency</Text>
         <Menu
           visible={menuVisible}

@@ -57,6 +57,11 @@ test('create, update, delete bank account', async () => {
   expect(list.length).toBe(0);
 });
 
+test('create bank account without prompt', async () => {
+  const created = await createBankAccount({ label: 'NoPrompt', currency: 'USD' });
+  expect(created.prompt).toBe('');
+});
+
 test('create and delete income category', async () => {
   const item = await createEntity({
     label: 'Bonus',
