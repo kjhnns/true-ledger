@@ -43,3 +43,60 @@ export async function summarizeExpensesByParent(start: number, end: number): Pro
 
   return Array.from(totals.values()).sort((a, b) => b.total - a.total);
 }
+
+export interface KeyMetrics {
+  income: number;
+  expenses: number;
+  savings: number;
+  cashflow: number;
+}
+
+async function sumByIds(
+  column: 'sender_id' | 'recipient_id',
+  ids: string[],
+  start: number,
+  end: number
+): Promise<number> {
+  if (ids.length === 0) return 0;
+  const db = await getDb();
+  const rows: any[] = await db.getAllAsync('SELECT * FROM transactions');
+  return rows
+    .filter(
+      (r) =>
+        r.created_at >= start &&
+        r.created_at <= end &&
+        r[column] &&
+        ids.includes(String(r[column]))
+    )
+    .reduce((sum, r) => sum + r.amount, 0);
+}
+
+async function sumSavings(start: number, end: number, ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const db = await getDb();
+  const rows: any[] = await db.getAllAsync('SELECT * FROM transactions');
+  let total = 0;
+  for (const r of rows) {
+    if (r.created_at < start || r.created_at > end) continue;
+    if (r.recipient_id && ids.includes(String(r.recipient_id))) total += r.amount;
+    if (r.sender_id && ids.includes(String(r.sender_id))) total -= r.amount;
+  }
+  return total;
+}
+
+export async function computeKeyMetrics(
+  start: number,
+  end: number,
+  incomeIds: string[],
+  savingsIds: string[]
+): Promise<KeyMetrics> {
+  const expensesList = await listEntities('expense');
+  const expenseIds = expensesList.map((e) => e.id);
+  const [income, expenses, savings] = await Promise.all([
+    sumByIds('sender_id', incomeIds, start, end),
+    sumByIds('recipient_id', expenseIds, start, end),
+    sumSavings(start, end, savingsIds),
+  ]);
+  return { income, expenses, savings, cashflow: income - expenses };
+}
+
