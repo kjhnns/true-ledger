@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import {
   SegmentedButtons,
   Text,
@@ -95,7 +95,7 @@ export default function Analysis() {
         setSelectedSavings(sav.map((e) => e.id));
       }
     })();
-  }, [incomeParam, savingsParam]);
+  }, [incomeParam, savingsParam, selectedIncome.length, selectedSavings.length]);
 
   useEffect(() => {
     (async () => {
@@ -114,10 +114,11 @@ export default function Analysis() {
   });
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Card>
-        <Card.Content>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
+        <Card>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             <View style={{ width: '50%', marginBottom: 12 }}>
               <Text variant="headlineMedium">Cashflow</Text>
               <Text>{nf.format(metrics.cashflow)}</Text>
@@ -143,7 +144,7 @@ export default function Analysis() {
               <Text>{nf.format(metrics.expenses)}</Text>
             </View>
             <View style={{ width: '50%', marginBottom: 12 }}>
-              <Tooltip title="Total amount minus shared amounts of shared, reviewed transactions in this timeframe">
+              <Tooltip title={"Amount minus\nshared portions of reviewed\nshared transactions"}>
                 <Text variant="headlineMedium">Split Credit</Text>
               </Tooltip>
               <Text>{nf.format(metrics.splitCredit)}</Text>
@@ -169,33 +170,34 @@ export default function Analysis() {
               <Text>{Math.round(metrics.savingsRatio * 100)}%</Text>
             </View>
           </View>
-        </Card.Content>
-      </Card>
-      {data.length === 0 ? (
-        <Text style={{ marginTop: 16 }}>No data</Text>
-      ) : (
-        <DataTable style={{ marginTop: 16 }}>
-          <DataTable.Header>
-            <DataTable.Title>Expense</DataTable.Title>
-            <DataTable.Title numeric>Amount</DataTable.Title>
-            <DataTable.Title numeric>% of total</DataTable.Title>
-          </DataTable.Header>
-          {data.map((d) => (
-            <DataTable.Row key={d.parentId}>
-              <DataTable.Cell>{d.parentLabel}</DataTable.Cell>
-              <DataTable.Cell numeric>{nf.format(d.total)}</DataTable.Cell>
-              <DataTable.Cell numeric>
-                {totalExpenses === 0
-                  ? '0%'
-                  : `${Math.round((d.total / totalExpenses) * 100)}%`}
-              </DataTable.Cell>
-            </DataTable.Row>
-          ))}
-        </DataTable>
-      )}
-      <Text style={{ marginTop: 16 }}>
-        Selected {reviewedCount} reviewed transactions for this timeframe
-      </Text>
+          </Card.Content>
+        </Card>
+        {data.length === 0 ? (
+          <Text style={{ marginTop: 16 }}>No data</Text>
+        ) : (
+          <DataTable style={{ marginTop: 16 }}>
+            <DataTable.Header>
+              <DataTable.Title>Expense</DataTable.Title>
+              <DataTable.Title numeric>Amount</DataTable.Title>
+              <DataTable.Title numeric>% of total</DataTable.Title>
+            </DataTable.Header>
+            {data.map((d) => (
+              <DataTable.Row key={d.parentId}>
+                <DataTable.Cell>{d.parentLabel}</DataTable.Cell>
+                <DataTable.Cell numeric>{nf.format(d.total)}</DataTable.Cell>
+                <DataTable.Cell numeric>
+                  {totalExpenses === 0
+                    ? '0%'
+                    : `${Math.round((d.total / totalExpenses) * 100)}%`}
+                </DataTable.Cell>
+              </DataTable.Row>
+            ))}
+          </DataTable>
+        )}
+        <Text style={{ marginTop: 16 }}>
+          Selected {reviewedCount} reviewed transactions for this timeframe
+        </Text>
+      </ScrollView>
       <SegmentedButtons
         value={range}
         onValueChange={(v) => setRange(v as RangeKey)}
@@ -205,7 +207,7 @@ export default function Analysis() {
           { value: 'qtd', label: 'Quarter to date' },
           { value: 'ytd', label: 'Year to date' },
         ]}
-        style={{ marginTop: 16 }}
+        style={{ position: 'absolute', left: 16, right: 16, bottom: 16 }}
       />
     </View>
   );

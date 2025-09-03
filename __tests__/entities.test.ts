@@ -13,6 +13,7 @@ import {
   listExpenseCategories,
   createEntity,
   deleteEntity,
+  groupEntitiesByCategory,
 } from '../lib/entities';
 import { initDb } from '../lib/db';
 const sqlite = require('expo-sqlite');
@@ -110,4 +111,45 @@ test('create, update, delete expense category with parent', async () => {
   list = await listExpenseCategories();
   expect(list.find((c) => c.id === parent.id)).toBeFalsy();
   expect(list.find((c) => c.id === child.id)).toBeFalsy();
+});
+
+test('groupEntitiesByCategory groups by category', () => {
+  const grouped = groupEntitiesByCategory([
+    {
+      id: '1',
+      label: 'Income1',
+      category: 'income',
+      prompt: '',
+      parentId: null,
+      currency: 'USD',
+      createdAt: 0,
+      updatedAt: 0,
+    },
+    {
+      id: '2',
+      label: 'Expense1',
+      category: 'expense',
+      prompt: '',
+      parentId: null,
+      currency: 'USD',
+      createdAt: 0,
+      updatedAt: 0,
+    },
+    {
+      id: '3',
+      label: 'Income2',
+      category: 'income',
+      prompt: '',
+      parentId: null,
+      currency: 'USD',
+      createdAt: 0,
+      updatedAt: 0,
+    },
+  ]);
+  expect(grouped.income.length).toBe(2);
+  expect(grouped.expense[0].id).toBe('2');
+});
+
+test('groupEntitiesByCategory handles empty list', () => {
+  expect(groupEntitiesByCategory([])).toEqual({});
 });
