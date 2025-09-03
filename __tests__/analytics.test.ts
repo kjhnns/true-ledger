@@ -19,14 +19,71 @@ describe('analytics', () => {
     const bus = await createExpenseCategory({ label: 'Bus', prompt: 'Bus', parentId: transport.id });
     const stmt = await createStatement({ bankId: '1', uploadDate: 1, status: 'new' });
     const now = Date.now();
-    await createTransaction({ statementId: stmt.id, recipientId: grocery.id, senderId: null, createdAt: now - 1000, amount: 100, currency: 'USD', shared: false });
-    await createTransaction({ statementId: stmt.id, recipientId: bus.id, senderId: null, createdAt: now - 500, amount: 50, currency: 'USD', shared: false });
-    await createTransaction({ statementId: stmt.id, recipientId: bus.id, senderId: null, createdAt: now - 250, amount: 25, currency: 'USD', shared: false });
+    await createTransaction({
+      statementId: stmt.id,
+      recipientId: grocery.id,
+      senderId: null,
+      createdAt: now - 1000,
+      amount: 100,
+      currency: 'USD',
+      shared: false,
+      reviewedAt: now - 1000,
+    });
+    await createTransaction({
+      statementId: stmt.id,
+      recipientId: bus.id,
+      senderId: null,
+      createdAt: now - 500,
+      amount: 50,
+      currency: 'USD',
+      shared: false,
+      reviewedAt: now - 500,
+    });
+    await createTransaction({
+      statementId: stmt.id,
+      recipientId: bus.id,
+      senderId: null,
+      createdAt: now - 250,
+      amount: 25,
+      currency: 'USD',
+      shared: false,
+      reviewedAt: now - 250,
+    });
 
     const res = await summarizeExpensesByParent(now - 2000, now);
     expect(res).toEqual([
       { parentId: food.id, parentLabel: 'Food', total: 100 },
       { parentId: transport.id, parentLabel: 'Transport', total: 75 },
+    ]);
+  });
+
+  it('ignores unreviewed expenses', async () => {
+    const food = await createExpenseCategory({ label: 'Food', prompt: 'Food', parentId: null });
+    const stmt = await createStatement({ bankId: '1', uploadDate: 1, status: 'new' });
+    const now = Date.now();
+    await createTransaction({
+      statementId: stmt.id,
+      recipientId: food.id,
+      senderId: null,
+      createdAt: now - 1000,
+      amount: 100,
+      currency: 'USD',
+      shared: false,
+      reviewedAt: now - 1000,
+    });
+    await createTransaction({
+      statementId: stmt.id,
+      recipientId: food.id,
+      senderId: null,
+      createdAt: now - 500,
+      amount: 50,
+      currency: 'USD',
+      shared: false,
+    });
+
+    const res = await summarizeExpensesByParent(now - 2000, now);
+    expect(res).toEqual([
+      { parentId: food.id, parentLabel: 'Food', total: 100 },
     ]);
   });
 
