@@ -50,6 +50,7 @@ export interface KeyMetrics {
   savings: number;
   cashflow: number;
   savingsRatio: number;
+  splitCredit: number;
 }
 
 async function sumByIds(
@@ -87,6 +88,20 @@ async function sumSavings(start: number, end: number, ids: string[]): Promise<nu
   return total;
 }
 
+async function sumSplitCredit(start: number, end: number): Promise<number> {
+  const db = await getDb();
+  const rows: any[] = await db.getAllAsync('SELECT * FROM transactions');
+  let total = 0;
+  for (const r of rows) {
+    if (!r.shared) continue;
+    if (!r.reviewed_at) continue;
+    if (r.created_at < start || r.created_at > end) continue;
+    const sharedAmount = r.shared_amount ?? r.amount;
+    total += r.amount - sharedAmount;
+  }
+  return total;
+}
+
 export async function computeKeyMetrics(
   start: number,
   end: number,
@@ -95,13 +110,21 @@ export async function computeKeyMetrics(
 ): Promise<KeyMetrics> {
   const expensesList = await listEntities('expense');
   const expenseIds = expensesList.map((e) => e.id);
-  const [income, expenses, savings] = await Promise.all([
+  const [income, expenses, savings, splitCredit] = await Promise.all([
     sumByIds('sender_id', incomeIds, start, end),
     sumByIds('recipient_id', expenseIds, start, end),
     sumSavings(start, end, savingsIds),
+    sumSplitCredit(start, end),
   ]);
   const savingsRatio = income === 0 ? 0 : savings / income;
-  return { income, expenses, savings, cashflow: income - expenses, savingsRatio };
+  return {
+    income,
+    expenses,
+    savings,
+    cashflow: income - expenses,
+    savingsRatio,
+    splitCredit,
+  };
 }
 
 export async function countReviewedTransactions(

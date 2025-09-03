@@ -4,6 +4,7 @@ import {
   SegmentedButtons,
   Text,
   Card,
+  Tooltip,
 } from 'react-native-paper';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import {
@@ -55,6 +56,7 @@ export default function Analysis() {
     savings: 0,
     cashflow: 0,
     savingsRatio: 0,
+    splitCredit: 0,
   });
   const [selectedIncome, setSelectedIncome] = useState<string[]>([]);
   const [selectedSavings, setSelectedSavings] = useState<string[]>([]);
@@ -134,6 +136,12 @@ export default function Analysis() {
             <View style={{ width: '50%', marginBottom: 12 }}>
               <Text variant="headlineMedium">Expenses</Text>
               <Text>{nf.format(metrics.expenses)}</Text>
+            </View>
+            <View style={{ width: '50%', marginBottom: 12 }}>
+              <Tooltip title="Total amount minus shared amounts of shared, reviewed transactions in this timeframe">
+                <Text variant="headlineMedium">Split Credit</Text>
+              </Tooltip>
+              <Text>{nf.format(metrics.splitCredit)}</Text>
             </View>
             <TouchableOpacity
               style={{ width: '50%', marginBottom: 12 }}

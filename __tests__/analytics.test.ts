@@ -92,14 +92,26 @@ describe('analytics', () => {
       shared: false,
       reviewedAt: now - 700,
     });
+    await createTransaction({
+      statementId: stmt.id,
+      recipientId: food.id,
+      senderId: null,
+      createdAt: now - 600,
+      amount: 40,
+      currency: 'USD',
+      shared: true,
+      sharedAmount: 10,
+      reviewedAt: now - 600,
+    });
 
     const res = await computeKeyMetrics(now - 2000, now, [salary.id], [save.id]);
     expect(res).toEqual({
       income: 100,
-      expenses: 30,
+      expenses: 70,
       savings: 15,
-      cashflow: 70,
+      cashflow: 30,
       savingsRatio: 0.15,
+      splitCredit: 30,
     });
   });
 
@@ -130,6 +142,7 @@ describe('analytics', () => {
       savings: 0,
       cashflow: 0,
       savingsRatio: 0,
+      splitCredit: 0,
     });
   });
 
@@ -176,6 +189,16 @@ describe('analytics', () => {
     });
     await createTransaction({
       statementId: stmt.id,
+      recipientId: food.id,
+      senderId: null,
+      createdAt: now - 850,
+      amount: 40,
+      currency: 'USD',
+      shared: true,
+      sharedAmount: 15,
+    });
+    await createTransaction({
+      statementId: stmt.id,
       recipientId: save.id,
       senderId: null,
       createdAt: now - 800,
@@ -191,6 +214,7 @@ describe('analytics', () => {
       savings: 0,
       cashflow: 100,
       savingsRatio: 0,
+      splitCredit: 0,
     });
   });
 });
