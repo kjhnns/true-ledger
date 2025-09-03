@@ -3,9 +3,15 @@ import { View, ScrollView } from 'react-native';
 import { Button, Chip, List, Text, useTheme } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { listEntities, Entity } from '../../lib/entities';
+import { buildRouteParams } from './routeParams';
 
 export default function AnalysisEntities() {
-  const { type, selected } = useLocalSearchParams<{ type: string; selected?: string }>();
+  const { type, selected, income, savings } = useLocalSearchParams<{
+    type: string;
+    selected?: string;
+    income?: string;
+    savings?: string;
+  }>();
   const [entities, setEntities] = useState<Entity[]>([]);
   const [current, setCurrent] = useState<string[]>([]);
   const theme = useTheme();
@@ -32,11 +38,19 @@ export default function AnalysisEntities() {
 
   const handleSave = () => {
     if (!type) return;
-    router.replace({ pathname: '/analysis', params: { [type]: current.join(',') } });
+    const params = buildRouteParams(type, current, { income, savings });
+    router.replace({ pathname: '/analysis', params });
   };
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: theme.colors.background }}>
+    <View
+      style={{
+        flex: 1,
+        padding: 16,
+        paddingBottom: 32,
+        backgroundColor: theme.colors.background,
+      }}
+    >
       <Text variant="headlineMedium">Define {type}</Text>
       <Text>Entities that sum to the metric</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
@@ -56,7 +70,11 @@ export default function AnalysisEntities() {
           <List.Item key={ent.id} title={ent.label} onPress={() => toggle(ent.id)} />
         ))}
       </ScrollView>
-      <Button mode="contained" onPress={handleSave} style={{ marginTop: 16 }}>
+      <Button
+        mode="contained"
+        onPress={handleSave}
+        style={{ marginTop: 16, marginBottom: 16 }}
+      >
         Save
       </Button>
     </View>

@@ -5,8 +5,8 @@ import {
   Text,
   Card,
   Tooltip,
+  DataTable,
 } from 'react-native-paper';
-import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import {
   summarizeExpensesByParent,
   ExpenseSummary,
@@ -68,7 +68,7 @@ export default function Analysis() {
       const res = await summarizeExpensesByParent(start, end);
       setData(res);
     })();
-    }, [range]);
+  }, [range]);
 
   useEffect(() => {
     (async () => {
@@ -76,24 +76,25 @@ export default function Analysis() {
         listEntities('income'),
         listEntities('savings'),
       ]);
-      if (selectedIncome.length === 0) setSelectedIncome(inc.map((e) => e.id));
-      if (selectedSavings.length === 0) setSelectedSavings(sav.map((e) => e.id));
+      if (incomeParam !== undefined) {
+        setSelectedIncome(
+          String(incomeParam)
+            .split(',')
+            .filter((s) => s)
+        );
+      } else if (selectedIncome.length === 0) {
+        setSelectedIncome(inc.map((e) => e.id));
+      }
+      if (savingsParam !== undefined) {
+        setSelectedSavings(
+          String(savingsParam)
+            .split(',')
+            .filter((s) => s)
+        );
+      } else if (selectedSavings.length === 0) {
+        setSelectedSavings(sav.map((e) => e.id));
+      }
     })();
-  }, []);
-
-  useEffect(() => {
-    if (incomeParam !== undefined)
-      setSelectedIncome(
-        String(incomeParam)
-          .split(',')
-          .filter((s) => s)
-      );
-    if (savingsParam !== undefined)
-      setSelectedSavings(
-        String(savingsParam)
-          .split(',')
-          .filter((s) => s)
-      );
   }, [incomeParam, savingsParam]);
 
   useEffect(() => {
@@ -106,11 +107,11 @@ export default function Analysis() {
     })();
   }, [range, selectedIncome, selectedSavings]);
 
-  const max = data.reduce((m, d) => Math.max(m, d.total), 0);
-  const barWidth = 40;
-  const gap = 20;
-  const chartHeight = 180;
-  const nf = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
+  const totalExpenses = data.reduce((sum, d) => sum + d.total, 0);
+  const nf = new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+  });
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
@@ -126,7 +127,11 @@ export default function Analysis() {
               onPress={() =>
                 router.push({
                   pathname: '/analysis/entities',
-                  params: { type: 'income', selected: selectedIncome.join(',') },
+                  params: {
+                    type: 'income',
+                    selected: selectedIncome.join(','),
+                    savings: selectedSavings.join(','),
+                  },
                 })
               }
             >
@@ -148,7 +153,11 @@ export default function Analysis() {
               onPress={() =>
                 router.push({
                   pathname: '/analysis/entities',
-                  params: { type: 'savings', selected: selectedSavings.join(',') },
+                  params: {
+                    type: 'savings',
+                    selected: selectedSavings.join(','),
+                    income: selectedIncome.join(','),
+                  },
                 })
               }
             >
@@ -162,40 +171,28 @@ export default function Analysis() {
           </View>
         </Card.Content>
       </Card>
-      <View style={{ height: chartHeight + 20, marginTop: 16 }}>
-        {data.length === 0 ? (
-          <Text>No data</Text>
-        ) : (
-          <Svg height={chartHeight + 20} width={(barWidth + gap) * data.length}>
-            {data.map((d, i) => {
-              const h = max === 0 ? 0 : (d.total / max) * chartHeight;
-              const x = i * (barWidth + gap);
-              return (
-                <>
-                  <Rect
-                    key={`bar-${d.parentId}`}
-                    x={x}
-                    y={chartHeight - h}
-                    width={barWidth}
-                    height={h}
-                    fill="#6200ee"
-                  />
-                  <SvgText
-                    key={`label-${d.parentId}`}
-                    x={x + barWidth / 2}
-                    y={chartHeight + 10}
-                    fontSize="10"
-                    fill="black"
-                    textAnchor="middle"
-                  >
-                    {d.parentLabel}
-                  </SvgText>
-                </>
-              );
-            })}
-          </Svg>
-        )}
-      </View>
+      {data.length === 0 ? (
+        <Text style={{ marginTop: 16 }}>No data</Text>
+      ) : (
+        <DataTable style={{ marginTop: 16 }}>
+          <DataTable.Header>
+            <DataTable.Title>Expense</DataTable.Title>
+            <DataTable.Title numeric>Amount</DataTable.Title>
+            <DataTable.Title numeric>% of total</DataTable.Title>
+          </DataTable.Header>
+          {data.map((d) => (
+            <DataTable.Row key={d.parentId}>
+              <DataTable.Cell>{d.parentLabel}</DataTable.Cell>
+              <DataTable.Cell numeric>{nf.format(d.total)}</DataTable.Cell>
+              <DataTable.Cell numeric>
+                {totalExpenses === 0
+                  ? '0%'
+                  : `${Math.round((d.total / totalExpenses) * 100)}%`}
+              </DataTable.Cell>
+            </DataTable.Row>
+          ))}
+        </DataTable>
+      )}
       <Text style={{ marginTop: 16 }}>
         Selected {reviewedCount} reviewed transactions for this timeframe
       </Text>

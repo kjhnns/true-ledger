@@ -33,6 +33,7 @@ export async function summarizeExpensesByParent(start: number, end: number): Pro
 
   for (const t of rows) {
     if (t.created_at < start || t.created_at > end) continue;
+    if (!t.reviewed_at) continue;
     if (!t.recipient_id) continue;
     const parent = resolveTopParent(catMap, String(t.recipient_id));
     if (!parent) continue;
