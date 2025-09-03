@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { Button, Chip, List, Text, useTheme } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { listEntities, Entity } from '../../lib/entities';
+import {
+  listEntities,
+  Entity,
+  EntityCategory,
+  groupEntitiesByCategory,
+} from '../../lib/entities';
 import { buildRouteParams } from './routeParams';
 
 export default function AnalysisEntities() {
@@ -16,19 +21,21 @@ export default function AnalysisEntities() {
   const [current, setCurrent] = useState<string[]>([]);
   const theme = useTheme();
   const router = useRouter();
+  const grouped = groupEntitiesByCategory(entities);
 
   useEffect(() => {
     (async () => {
-      if (!type) return;
-      const list = await listEntities(type as any);
-      setEntities(list);
+      const categories: EntityCategory[] = ['bank', 'expense', 'income', 'savings'];
+      const lists = await Promise.all(categories.map((c) => listEntities(c)));
+      const all = lists.flat();
+      setEntities(all);
       if (selected) {
         setCurrent(String(selected).split(',').filter((s) => s));
       } else {
-        setCurrent(list.map((e) => e.id));
+        setCurrent(all.map((e) => e.id));
       }
     })();
-  }, [type, selected]);
+  }, [selected]);
 
   const toggle = (id: string) => {
     setCurrent((prev) =>
@@ -66,8 +73,19 @@ export default function AnalysisEntities() {
       </View>
       <Text style={{ marginTop: 16, fontWeight: 'bold' }}>Select entities for metric</Text>
       <ScrollView style={{ flex: 1, marginTop: 8 }}>
-        {entities.map((ent) => (
-          <List.Item key={ent.id} title={ent.label} onPress={() => toggle(ent.id)} />
+        {(Object.keys(grouped) as EntityCategory[]).map((cat) => (
+          <List.Section key={cat}>
+            <List.Subheader>
+              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            </List.Subheader>
+            {grouped[cat].map((ent) => (
+              <List.Item
+                key={ent.id}
+                title={ent.label}
+                onPress={() => toggle(ent.id)}
+              />
+            ))}
+          </List.Section>
         ))}
       </ScrollView>
       <Button

@@ -186,3 +186,12 @@ export async function updateExpenseCategory(
 export async function deleteExpenseCategory(id: string) {
   return deleteEntity(id);
 }
+
+export function groupEntitiesByCategory(
+  entities: Entity[],
+): Record<EntityCategory, Entity[]> {
+  return entities.reduce((acc, ent) => {
+    (acc[ent.category] ??= []).push(ent);
+    return acc;
+  }, {} as Record<EntityCategory, Entity[]>);
+}
