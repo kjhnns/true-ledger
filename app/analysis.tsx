@@ -250,28 +250,30 @@ export default function Analysis() {
         style={{ marginTop: 16 }}
       />
       <Portal>
-        <MetricModal
-          visible={modal === 'income'}
-          title="Define income"
-          entities={incomeEntities}
-          selected={selectedIncome}
-          onSave={(ids) => {
-            setSelectedIncome(ids);
-            setModal(null);
-          }}
-          onDismiss={() => setModal(null)}
-        />
-        <MetricModal
-          visible={modal === 'savings'}
-          title="Define savings"
-          entities={savingsEntities}
-          selected={selectedSavings}
-          onSave={(ids) => {
-            setSelectedSavings(ids);
-            setModal(null);
-          }}
-          onDismiss={() => setModal(null)}
-        />
+        <>
+          <MetricModal
+            visible={modal === 'income'}
+            title="Define income"
+            entities={incomeEntities}
+            selected={selectedIncome}
+            onSave={(ids) => {
+              setSelectedIncome(ids);
+              setModal(null);
+            }}
+            onDismiss={() => setModal(null)}
+          />
+          <MetricModal
+            visible={modal === 'savings'}
+            title="Define savings"
+            entities={savingsEntities}
+            selected={selectedSavings}
+            onSave={(ids) => {
+              setSelectedSavings(ids);
+              setModal(null);
+            }}
+            onDismiss={() => setModal(null)}
+          />
+        </>
       </Portal>
     </View>
   );
