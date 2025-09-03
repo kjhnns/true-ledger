@@ -49,6 +49,7 @@ export interface KeyMetrics {
   expenses: number;
   savings: number;
   cashflow: number;
+  savingsRatio: number;
 }
 
 async function sumByIds(
@@ -66,7 +67,8 @@ async function sumByIds(
         r.created_at >= start &&
         r.created_at <= end &&
         r[column] &&
-        ids.includes(String(r[column]))
+        ids.includes(String(r[column])) &&
+        r.reviewed_at
     )
     .reduce((sum, r) => sum + r.amount, 0);
 }
@@ -78,6 +80,7 @@ async function sumSavings(start: number, end: number, ids: string[]): Promise<nu
   let total = 0;
   for (const r of rows) {
     if (r.created_at < start || r.created_at > end) continue;
+    if (!r.reviewed_at) continue;
     if (r.recipient_id && ids.includes(String(r.recipient_id))) total += r.amount;
     if (r.sender_id && ids.includes(String(r.sender_id))) total -= r.amount;
   }
@@ -97,6 +100,20 @@ export async function computeKeyMetrics(
     sumByIds('recipient_id', expenseIds, start, end),
     sumSavings(start, end, savingsIds),
   ]);
-  return { income, expenses, savings, cashflow: income - expenses };
+  const savingsRatio = income === 0 ? 0 : savings / income;
+  return { income, expenses, savings, cashflow: income - expenses, savingsRatio };
+}
+
+export async function countReviewedTransactions(
+  start: number,
+  end: number
+): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM transactions WHERE reviewed_at IS NOT NULL AND created_at>=? AND created_at<=?',
+    start,
+    end
+  );
+  return row?.count ?? 0;
 }
 

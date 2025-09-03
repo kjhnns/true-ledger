@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import {
   SegmentedButtons,
   Text,
   Card,
-  Modal,
-  Portal,
-  Button,
-  Chip,
-  List,
-  useTheme,
 } from 'react-native-paper';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import {
@@ -17,90 +11,12 @@ import {
   ExpenseSummary,
   computeKeyMetrics,
   KeyMetrics,
+  countReviewedTransactions,
 } from '../lib/analytics';
-import { listEntities, Entity } from '../lib/entities';
+import { listEntities } from '../lib/entities';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 type RangeKey = '7d' | '1m' | 'qtd' | 'ytd';
-
-interface MetricModalProps {
-  visible: boolean;
-  title: string;
-  entities: Entity[];
-  selected: string[];
-  onSave: (ids: string[]) => void;
-  onDismiss: () => void;
-}
-
-function MetricModal({
-  visible,
-  title,
-  entities,
-  selected,
-  onSave,
-  onDismiss,
-}: MetricModalProps) {
-  const [current, setCurrent] = useState<string[]>(selected);
-  const theme = useTheme();
-
-  useEffect(() => {
-    setCurrent(selected);
-  }, [selected, visible]);
-
-  const toggle = (id: string) => {
-    setCurrent((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      onDismiss={onDismiss}
-      contentContainerStyle={{ margin: 20, flex: 1 }}
-    >
-      <View
-        style={{
-          backgroundColor: theme.colors.background,
-          flex: 1,
-          borderRadius: 12,
-        }}
-      >
-        <View style={{ padding: 16 }}>
-          <Text variant="headlineMedium">{title}</Text>
-          <Text>Entities that sum to the metric</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
-            {current.map((id) => {
-              const ent = entities.find((e) => e.id === id);
-              if (!ent) return null;
-              return (
-                <Chip key={id} onPress={() => toggle(id)} style={{ margin: 4 }}>
-                  {ent.label}
-                </Chip>
-              );
-            })}
-          </View>
-        </View>
-        <Text style={{ marginHorizontal: 16, marginTop: 8, fontWeight: 'bold' }}>
-          Select entities for metric
-        </Text>
-        <ScrollView style={{ flex: 1, marginTop: 8 }}>
-          {entities.map((ent) => (
-            <List.Item
-              key={ent.id}
-              title={ent.label}
-              onPress={() => toggle(ent.id)}
-            />
-          ))}
-        </ScrollView>
-        <View style={{ padding: 16 }}>
-          <Button mode="contained" onPress={() => onSave(current)}>
-            Save
-          </Button>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 function getRange(key: RangeKey): { start: number; end: number } {
   const now = new Date();
@@ -125,6 +41,12 @@ function getRange(key: RangeKey): { start: number; end: number } {
 }
 
 export default function Analysis() {
+  const router = useRouter();
+  const { income: incomeParam, savings: savingsParam } =
+    useLocalSearchParams<{
+      income?: string;
+      savings?: string;
+    }>();
   const [range, setRange] = useState<RangeKey>('ytd');
   const [data, setData] = useState<ExpenseSummary[]>([]);
   const [metrics, setMetrics] = useState<KeyMetrics>({
@@ -132,12 +54,11 @@ export default function Analysis() {
     expenses: 0,
     savings: 0,
     cashflow: 0,
+    savingsRatio: 0,
   });
-  const [incomeEntities, setIncomeEntities] = useState<Entity[]>([]);
-  const [savingsEntities, setSavingsEntities] = useState<Entity[]>([]);
   const [selectedIncome, setSelectedIncome] = useState<string[]>([]);
   const [selectedSavings, setSelectedSavings] = useState<string[]>([]);
-  const [modal, setModal] = useState<'income' | 'savings' | null>(null);
+  const [reviewedCount, setReviewedCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -145,7 +66,7 @@ export default function Analysis() {
       const res = await summarizeExpensesByParent(start, end);
       setData(res);
     })();
-  }, [range]);
+    }, [range]);
 
   useEffect(() => {
     (async () => {
@@ -153,18 +74,33 @@ export default function Analysis() {
         listEntities('income'),
         listEntities('savings'),
       ]);
-      setIncomeEntities(inc);
-      setSavingsEntities(sav);
-      setSelectedIncome(inc.map((e) => e.id));
-      setSelectedSavings(sav.map((e) => e.id));
+      if (selectedIncome.length === 0) setSelectedIncome(inc.map((e) => e.id));
+      if (selectedSavings.length === 0) setSelectedSavings(sav.map((e) => e.id));
     })();
   }, []);
+
+  useEffect(() => {
+    if (incomeParam !== undefined)
+      setSelectedIncome(
+        String(incomeParam)
+          .split(',')
+          .filter((s) => s)
+      );
+    if (savingsParam !== undefined)
+      setSelectedSavings(
+        String(savingsParam)
+          .split(',')
+          .filter((s) => s)
+      );
+  }, [incomeParam, savingsParam]);
 
   useEffect(() => {
     (async () => {
       const { start, end } = getRange(range);
       const res = await computeKeyMetrics(start, end, selectedIncome, selectedSavings);
       setMetrics(res);
+      const count = await countReviewedTransactions(start, end);
+      setReviewedCount(count);
     })();
   }, [range, selectedIncome, selectedSavings]);
 
@@ -185,7 +121,12 @@ export default function Analysis() {
             </View>
             <TouchableOpacity
               style={{ width: '50%', marginBottom: 12 }}
-              onPress={() => setModal('income')}
+              onPress={() =>
+                router.push({
+                  pathname: '/analysis/entities',
+                  params: { type: 'income', selected: selectedIncome.join(',') },
+                })
+              }
             >
               <Text variant="headlineMedium">Income</Text>
               <Text>{nf.format(metrics.income)}</Text>
@@ -196,11 +137,20 @@ export default function Analysis() {
             </View>
             <TouchableOpacity
               style={{ width: '50%', marginBottom: 12 }}
-              onPress={() => setModal('savings')}
+              onPress={() =>
+                router.push({
+                  pathname: '/analysis/entities',
+                  params: { type: 'savings', selected: selectedSavings.join(',') },
+                })
+              }
             >
               <Text variant="headlineMedium">Savings</Text>
               <Text>{nf.format(metrics.savings)}</Text>
             </TouchableOpacity>
+            <View style={{ width: '50%', marginBottom: 12 }}>
+              <Text variant="headlineMedium">Savings Ratio</Text>
+              <Text>{Math.round(metrics.savingsRatio * 100)}%</Text>
+            </View>
           </View>
         </Card.Content>
       </Card>
@@ -238,6 +188,9 @@ export default function Analysis() {
           </Svg>
         )}
       </View>
+      <Text style={{ marginTop: 16 }}>
+        Selected {reviewedCount} reviewed transactions for this timeframe
+      </Text>
       <SegmentedButtons
         value={range}
         onValueChange={(v) => setRange(v as RangeKey)}
@@ -249,32 +202,6 @@ export default function Analysis() {
         ]}
         style={{ marginTop: 16 }}
       />
-      <Portal>
-        <>
-          <MetricModal
-            visible={modal === 'income'}
-            title="Define income"
-            entities={incomeEntities}
-            selected={selectedIncome}
-            onSave={(ids) => {
-              setSelectedIncome(ids);
-              setModal(null);
-            }}
-            onDismiss={() => setModal(null)}
-          />
-          <MetricModal
-            visible={modal === 'savings'}
-            title="Define savings"
-            entities={savingsEntities}
-            selected={selectedSavings}
-            onSave={(ids) => {
-              setSelectedSavings(ids);
-              setModal(null);
-            }}
-            onDismiss={() => setModal(null)}
-          />
-        </>
-      </Portal>
     </View>
   );
 }
