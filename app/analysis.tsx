@@ -6,6 +6,7 @@ import {
   Card,
   Tooltip,
   DataTable,
+  Button,
 } from 'react-native-paper';
 import {
   summarizeExpensesByParent,
@@ -15,6 +16,7 @@ import {
   countReviewedTransactions,
   summarizeReviewedTransactionsByBank,
   BankTransactionSummary,
+  exportReviewedTransactionsToCsv,
 } from '../lib/analytics';
 import { listEntities } from '../lib/entities';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -64,6 +66,18 @@ export default function Analysis() {
   const [selectedSavings, setSelectedSavings] = useState<string[]>([]);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [bankSummary, setBankSummary] = useState<BankTransactionSummary[]>([]);
+
+  const handleExport = async () => {
+    const { start, end } = getRange(range);
+    const csv = await exportReviewedTransactionsToCsv(start, end);
+    const FileSystem = await import('expo-file-system');
+    const Sharing = await import('expo-sharing');
+    const uri = `${FileSystem.cacheDirectory}reviewed-transactions-${start}-${end}.csv`;
+    await FileSystem.writeAsStringAsync(uri, csv, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+    await Sharing.shareAsync(uri, { mimeType: 'text/csv' });
+  };
 
   useEffect(() => {
     (async () => {
@@ -232,6 +246,9 @@ export default function Analysis() {
           padding: 4,
         }}
       >
+        <Button mode="contained" onPress={handleExport} style={{ marginBottom: 8 }}>
+          Generate CSV export
+        </Button>
         <SegmentedButtons
           value={range}
           onValueChange={(v) => setRange(v as RangeKey)}

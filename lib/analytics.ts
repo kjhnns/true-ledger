@@ -189,3 +189,77 @@ export async function summarizeReviewedTransactionsByBank(
     .sort((a, b) => a.bankLabel.localeCompare(b.bankLabel));
 }
 
+function toCamel(parts: string[]): string {
+  return parts
+    .map((part) =>
+      part
+        .replace(/[^a-zA-Z0-9 ]+/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join('')
+    )
+    .map((part, idx) =>
+      idx === 0 ? part.charAt(0).toLowerCase() + part.slice(1) : part
+    )
+    .join('');
+}
+
+function buildEntityKey(
+  entity: Entity | undefined,
+  map: Map<string, Entity>
+): string {
+  if (!entity) return '';
+  const labels: string[] = [];
+  let current: Entity | undefined | null = entity;
+  while (current) {
+    labels.unshift(current.label);
+    if (!current.parentId) break;
+    current = map.get(current.parentId) || null;
+  }
+  return toCamel([entity.category, ...labels]);
+}
+
+function escapeCsv(val: string): string {
+  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+}
+
+export async function exportReviewedTransactionsToCsv(
+  start: number,
+  end: number
+): Promise<string> {
+  const db = await getDb();
+  const rows: any[] = await db.getAllAsync('SELECT * FROM transactions');
+  const [banks, expenses, incomes, savings] = await Promise.all([
+    listEntities('bank'),
+    listEntities('expense'),
+    listEntities('income'),
+    listEntities('savings'),
+  ]);
+  const entMap = new Map<string, Entity>();
+  for (const e of [...banks, ...expenses, ...incomes, ...savings]) {
+    entMap.set(e.id, e);
+  }
+
+  const lines = ['id,date,description,amount,sender,recipient'];
+  for (const t of rows) {
+    if (t.created_at < start || t.created_at > end) continue;
+    if (!t.reviewed_at) continue;
+    const sender = buildEntityKey(entMap.get(String(t.sender_id)), entMap);
+    const recipient = buildEntityKey(entMap.get(String(t.recipient_id)), entMap);
+    const cols = [
+      escapeCsv(String(t.id)),
+      escapeCsv(new Date(t.created_at).toISOString()),
+      escapeCsv(t.description ?? ''),
+      escapeCsv(String(t.amount)),
+      escapeCsv(sender),
+      escapeCsv(recipient),
+    ];
+    lines.push(cols.join(','));
+  }
+  return lines.join('\n');
+}
+
