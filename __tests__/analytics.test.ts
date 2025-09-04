@@ -3,7 +3,7 @@ jest.mock('expo-sqlite', () => require('../test-utils/sqliteMock').sqliteMock);
 import { createStatement } from '../lib/statements';
 import { createExpenseCategory, createEntity } from '../lib/entities';
 import { createTransaction } from '../lib/transactions';
-import { summarizeExpensesByParent, computeKeyMetrics } from '../lib/analytics';
+import { summarizeExpensesByParent, computeKeyMetrics, summarizeReviewedTransactionsByBank } from '../lib/analytics';
 import sqliteMock from '../test-utils/sqliteMock';
 
 describe('analytics', () => {
@@ -273,5 +273,59 @@ describe('analytics', () => {
       savingsRatio: 0,
       splitCredit: 0,
     });
+  });
+
+  it('summarizes reviewed transactions by bank account', async () => {
+    const bank1 = await createEntity({
+      label: 'Bank1',
+      category: 'bank',
+      prompt: '',
+      parentId: null,
+      currency: 'USD',
+    });
+    const bank2 = await createEntity({
+      label: 'Bank2',
+      category: 'bank',
+      prompt: '',
+      parentId: null,
+      currency: 'USD',
+    });
+    const stmt1 = await createStatement({ bankId: bank1.id, uploadDate: 1, status: 'new' });
+    const now = Date.now();
+    await createTransaction({
+      statementId: stmt1.id,
+      recipientId: null,
+      senderId: null,
+      createdAt: now - 1000,
+      amount: 100,
+      currency: 'USD',
+      shared: false,
+      reviewedAt: now - 1000,
+    });
+    await createTransaction({
+      statementId: stmt1.id,
+      recipientId: null,
+      senderId: null,
+      createdAt: now - 500,
+      amount: 50,
+      currency: 'USD',
+      shared: false,
+    });
+    await createTransaction({
+      statementId: stmt1.id,
+      recipientId: null,
+      senderId: null,
+      createdAt: now - 5000,
+      amount: 75,
+      currency: 'USD',
+      shared: false,
+      reviewedAt: now - 5000,
+    });
+
+    const res = await summarizeReviewedTransactionsByBank(now - 2000, now);
+    expect(res).toEqual([
+      { bankId: bank1.id, bankLabel: 'Bank1', count: 1, total: 100 },
+      { bankId: bank2.id, bankLabel: 'Bank2', count: 0, total: 0 },
+    ]);
   });
 });

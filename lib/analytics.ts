@@ -141,3 +141,51 @@ export async function countReviewedTransactions(
   return row?.count ?? 0;
 }
 
+export interface BankTransactionSummary {
+  bankId: string;
+  bankLabel: string;
+  count: number;
+  total: number;
+}
+
+export async function summarizeReviewedTransactionsByBank(
+  start: number,
+  end: number
+): Promise<BankTransactionSummary[]> {
+  const db = await getDb();
+  const [transactions, statements, banks] = await Promise.all([
+    db.getAllAsync<any>('SELECT * FROM transactions'),
+    db.getAllAsync<any>('SELECT * FROM statements'),
+    listEntities('bank'),
+  ]);
+
+  const stmtMap = new Map<string, any>();
+  statements.forEach((s) => stmtMap.set(String(s.id), s));
+
+  const summary = new Map<string, { bankLabel: string; count: number; total: number }>();
+  banks.forEach((b) =>
+    summary.set(b.id, { bankLabel: b.label, count: 0, total: 0 })
+  );
+
+  for (const t of transactions) {
+    if (t.created_at < start || t.created_at > end) continue;
+    if (!t.reviewed_at) continue;
+    const stmt = stmtMap.get(String(t.statement_id));
+    if (!stmt) continue;
+    const bankId = String(stmt.bank_id);
+    const entry = summary.get(bankId);
+    if (!entry) continue;
+    entry.count += 1;
+    entry.total += t.amount;
+  }
+
+  return Array.from(summary.entries())
+    .map(([bankId, { bankLabel, count, total }]) => ({
+      bankId,
+      bankLabel,
+      count,
+      total,
+    }))
+    .sort((a, b) => a.bankLabel.localeCompare(b.bankLabel));
+}
+

@@ -13,6 +13,8 @@ import {
   computeKeyMetrics,
   KeyMetrics,
   countReviewedTransactions,
+  summarizeReviewedTransactionsByBank,
+  BankTransactionSummary,
 } from '../lib/analytics';
 import { listEntities } from '../lib/entities';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -61,6 +63,7 @@ export default function Analysis() {
   const [selectedIncome, setSelectedIncome] = useState<string[]>([]);
   const [selectedSavings, setSelectedSavings] = useState<string[]>([]);
   const [reviewedCount, setReviewedCount] = useState(0);
+  const [bankSummary, setBankSummary] = useState<BankTransactionSummary[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -102,8 +105,12 @@ export default function Analysis() {
       const { start, end } = getRange(range);
       const res = await computeKeyMetrics(start, end, selectedIncome, selectedSavings);
       setMetrics(res);
-      const count = await countReviewedTransactions(start, end);
+      const [count, byBank] = await Promise.all([
+        countReviewedTransactions(start, end),
+        summarizeReviewedTransactionsByBank(start, end),
+      ]);
       setReviewedCount(count);
+      setBankSummary(byBank);
     })();
   }, [range, selectedIncome, selectedSavings]);
 
@@ -197,18 +204,45 @@ export default function Analysis() {
         <Text style={{ marginTop: 16 }}>
           Selected {reviewedCount} reviewed transactions for this timeframe
         </Text>
+        {bankSummary.length > 0 && (
+          <DataTable style={{ marginTop: 16 }}>
+            <DataTable.Header>
+              <DataTable.Title>Bank</DataTable.Title>
+              <DataTable.Title numeric>Count</DataTable.Title>
+              <DataTable.Title numeric>Total</DataTable.Title>
+            </DataTable.Header>
+            {bankSummary.map((b) => (
+              <DataTable.Row key={b.bankId}>
+                <DataTable.Cell>{b.bankLabel}</DataTable.Cell>
+                <DataTable.Cell numeric>{b.count}</DataTable.Cell>
+                <DataTable.Cell numeric>{nf.format(b.total)}</DataTable.Cell>
+              </DataTable.Row>
+            ))}
+          </DataTable>
+        )}
       </ScrollView>
-      <SegmentedButtons
-        value={range}
-        onValueChange={(v) => setRange(v as RangeKey)}
-        buttons={[
-          { value: '7d', label: 'Last 7 days' },
-          { value: '1m', label: 'Last month' },
-          { value: 'qtd', label: 'Quarter to date' },
-          { value: 'ytd', label: 'Year to date' },
-        ]}
-        style={{ position: 'absolute', left: 16, right: 16, bottom: 16 }}
-      />
+      <View
+        style={{
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: 16,
+          backgroundColor: 'white',
+          borderRadius: 4,
+          padding: 4,
+        }}
+      >
+        <SegmentedButtons
+          value={range}
+          onValueChange={(v) => setRange(v as RangeKey)}
+          buttons={[
+            { value: '7d', label: 'Last 7 days' },
+            { value: '1m', label: 'Last month' },
+            { value: 'qtd', label: 'Quarter to date' },
+            { value: 'ytd', label: 'Year to date' },
+          ]}
+        />
+      </View>
     </View>
   );
 }
