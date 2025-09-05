@@ -64,12 +64,13 @@ export default function IncomeSavingsPage() {
         ]}
       />
       <TextInput
+        mode="outlined"
         label="Label"
         value={label}
         onChangeText={setLabel}
         style={{ marginVertical: 8 }}
       />
-      <Button mode="contained" onPress={handleAdd} disabled={!label.trim()}>
+      <Button mode="outlined" onPress={handleAdd} disabled={!label.trim()}>
         Add
       </Button>
       <View style={{ marginTop: 24 }}>

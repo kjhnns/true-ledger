@@ -151,11 +151,7 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
                     ? 'check'
                     : undefined
                 }
-                mode={
-                  scope.mode === 'month' && scope.year === year && scope.month === idx + 1
-                    ? 'contained'
-                    : 'text'
-                }
+                mode="outlined"
                 style={{ width: '33.33%', height: 44 }}
                 accessibilityLabel={`${
                   scope.mode === 'month' && scope.year === year && scope.month === idx + 1
@@ -190,10 +186,24 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
       <Portal>
         <Modal visible={showCustom} onDismiss={() => setShowCustom(false)}>
           <View style={{ padding: 16, backgroundColor: 'white' }}>
-            <TextInput placeholder="Start ISO" value={start} onChangeText={setStart} />
-            <TextInput placeholder="End ISO" value={end} onChangeText={setEnd} />
-            <Button onPress={applyCustom}>Apply</Button>
-            <Button onPress={() => setShowCustom(false)}>Cancel</Button>
+            <TextInput
+              mode="outlined"
+              placeholder="Start ISO"
+              value={start}
+              onChangeText={setStart}
+            />
+            <TextInput
+              mode="outlined"
+              placeholder="End ISO"
+              value={end}
+              onChangeText={setEnd}
+            />
+            <Button mode="outlined" onPress={applyCustom}>
+              Apply
+            </Button>
+            <Button mode="outlined" onPress={() => setShowCustom(false)}>
+              Cancel
+            </Button>
           </View>
         </Modal>
       </Portal>

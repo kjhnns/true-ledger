@@ -86,7 +86,7 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
         {error ? (
           <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
         ) : null}
-        <Button mode="contained" onPress={handleSave}>
+        <Button mode="outlined" onPress={handleSave}>
           {submitLabel}
         </Button>
       </View>

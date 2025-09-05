@@ -61,7 +61,13 @@ export default function UploadModal(props: UploadModalProps) {
 
             <List.Section>
               <List.Subheader>File</List.Subheader>
-              <Button mode="contained" icon="file-upload" onPress={onPickFile} style={{ marginBottom: 8 }} accessibilityLabel="Pick PDF file">
+              <Button
+                mode="outlined"
+                icon="file-upload"
+                onPress={onPickFile}
+                style={{ marginBottom: 8 }}
+                accessibilityLabel="Pick PDF file"
+              >
                 Pick PDF file
               </Button>
               <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>Only PDF files are allowed</Text>
@@ -69,8 +75,12 @@ export default function UploadModal(props: UploadModalProps) {
             </List.Section>
 
             <View style={{ marginTop: 12, flexDirection: 'row', gap: 8 }}>
-              <Button mode="contained" onPress={onUpload} style={{ marginRight: 8 }}>Upload</Button>
-              <Button onPress={onCancelForm}>Cancel</Button>
+              <Button mode="outlined" onPress={onUpload} style={{ marginRight: 8 }}>
+                Upload
+              </Button>
+              <Button mode="outlined" onPress={onCancelForm}>
+                Cancel
+              </Button>
             </View>
           </View>
         </Modal>

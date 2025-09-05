@@ -35,20 +35,20 @@ function ManageButtons() {
         Manage categories
       </Text>
       <Button
-        mode="contained"
+        mode="outlined"
         onPress={() => router.push('/bank-accounts')}
         style={{ marginBottom: 8 }}
       >
         Manage bank accounts
       </Button>
       <Button
-        mode="contained"
+        mode="outlined"
         onPress={() => router.push('/expense-categories')}
         style={{ marginBottom: 8 }}
       >
         Manage expense categories
       </Button>
-      <Button mode="contained" onPress={() => router.push('/income-savings')}>
+      <Button mode="outlined" onPress={() => router.push('/income-savings')}>
         Manage income & savings
       </Button>
     </View>
@@ -151,7 +151,7 @@ const handleRemove = () => {
               {error}
             </Text>
           ) : null}
-          <Button mode="contained" onPress={handleSave}>
+          <Button mode="outlined" onPress={handleSave}>
             {hasKey ? 'Save new key' : 'Save key'}
           </Button>
         </View>
@@ -166,11 +166,11 @@ const handleRemove = () => {
         <Text style={{ marginBottom: 16 }}>
           Key saved • Last updated {formatDate(updatedAt)}
         </Text>
-        <Button mode="contained" onPress={() => setEditing(true)}>
+        <Button mode="outlined" onPress={() => setEditing(true)}>
           Replace key
         </Button>
         <View style={{ height: 8 }} />
-        <Button onPress={handleRemove}>Remove key</Button>
+        <Button mode="outlined" onPress={handleRemove}>Remove key</Button>
       </View>
     );
   };
@@ -189,7 +189,7 @@ const handleRemove = () => {
         onChangeText={setPrompt}
         style={{ marginBottom: 8 }}
       />
-      <Button onPress={() => Keyboard.dismiss()} style={{ marginBottom: 8 }}>
+      <Button mode="outlined" onPress={() => Keyboard.dismiss()} style={{ marginBottom: 8 }}>
         Dismiss keyboard
       </Button>
       <Divider style={{ marginVertical: 16 }} />
@@ -217,7 +217,7 @@ const handleRemove = () => {
       <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>
         This will be the default shared value for all entries created.
       </Text>
-      <Button onPress={handlePromptSave}>Save settings</Button>
+      <Button mode="outlined" onPress={handlePromptSave}>Save settings</Button>
       <Divider style={{ marginVertical: 16 }} />
       {renderKeySection()}
     </ScrollView>

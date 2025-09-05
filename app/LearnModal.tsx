@@ -118,8 +118,12 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
               })}
             </ScrollView>
             <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <Button onPress={onDismiss} style={{ marginRight: 8 }}>Cancel</Button>
-              <Button mode="contained" onPress={start} disabled={selected.size === 0}>Learn</Button>
+              <Button mode="outlined" onPress={onDismiss} style={{ marginRight: 8 }}>
+                Cancel
+              </Button>
+              <Button mode="outlined" onPress={start} disabled={selected.size === 0}>
+                Learn
+              </Button>
             </View>
           </View>
         ) : (
@@ -135,7 +139,7 @@ export default function LearnModal({ visible, bank, transactions, onDismiss, onC
             </View>
             <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
               <Button mode="outlined" onPress={abort}>Abort</Button>
-              <Button mode="contained" onPress={onDismiss} disabled={!completed}>
+              <Button mode="outlined" onPress={onDismiss} disabled={!completed}>
                 {completed ? 'Close' : 'Wait'}
               </Button>
             </View>
