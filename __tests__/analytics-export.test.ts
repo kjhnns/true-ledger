@@ -13,8 +13,16 @@ describe('exportReviewedTransactionsToCsv', () => {
   });
 
   it('exports reviewed transactions with entity keys', async () => {
-    const parent = await createExpenseCategory({ label: 'Food', prompt: 'Food', parentId: null });
-    const child = await createExpenseCategory({ label: 'Groceries', prompt: 'Groceries', parentId: parent.id });
+    const parent = await createExpenseCategory({
+      label: 'Food and Drink',
+      prompt: 'Food and Drink',
+      parentId: null,
+    });
+    const child = await createExpenseCategory({
+      label: 'Groceries Store',
+      prompt: 'Groceries Store',
+      parentId: parent.id,
+    });
     const income = await createEntity({
       label: 'Salary',
       category: 'income',
@@ -51,7 +59,7 @@ describe('exportReviewedTransactionsToCsv', () => {
     expect(lines).toHaveLength(2);
     const row = lines[1].split(',');
     expect(row[3]).toBe('100');
-    expect(row[4]).toBe('incomeSalary');
-    expect(row[5]).toBe('expenseFoodGroceries');
+    expect(row[4]).toBe('income_salary');
+    expect(row[5]).toBe('expense_foodAndDrink_groceriesStore');
   });
 });
