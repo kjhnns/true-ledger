@@ -217,7 +217,8 @@ function buildEntityKey(
     if (!current.parentId) break;
     current = map.get(current.parentId) || null;
   }
-  return toCamel([entity.category, ...labels]);
+  const tokens = [entity.category, ...labels].map((l) => toCamel([l]));
+  return tokens.join('_');
 }
 
 function escapeCsv(val: string): string {
