@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
   TextInput,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import {
   Button,
@@ -13,7 +16,7 @@ import {
   IconButton,
   List,
 } from 'react-native-paper';
-import { Mode, Scope, Month } from '../lib/timeScope';
+import { Mode, Scope, Month, MONTH_LABELS } from '../lib/timeScope';
 
 interface Props {
   scope: Scope;
@@ -22,28 +25,51 @@ interface Props {
   onClose?: () => void;
 }
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 export default function TimeScopePicker({ scope, onChange }: Props) {
   const now = new Date();
   const [mode, setMode] = useState<Mode>(scope.mode);
-  const [year, setYear] = useState(scope.mode === 'month' || scope.mode === 'year' ? scope.year : now.getFullYear());
+  const [open, setOpen] = useState(false);
+  const [year, setYear] = useState(
+    scope.mode === 'month' || scope.mode === 'year' ? scope.year : now.getFullYear()
+  );
   const [showCustom, setShowCustom] = useState(false);
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
+  const lastChevron = useRef(0);
+
+  if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+
+  const animate = () => {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(200, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)
+    );
+  };
+
+  useEffect(() => {
+    setMode(scope.mode);
+    if (scope.mode === 'month' || scope.mode === 'year') {
+      setYear(scope.year);
+    }
+  }, [scope]);
 
   const handleModeChange = (m: Mode) => {
+    animate();
     setMode(m);
     if (m === 'all') {
       onChange({ mode: 'all' });
+      setOpen(false);
     } else if (m === 'month') {
       onChange({
         mode: 'month',
         year,
         month: (scope.mode === 'month' ? scope.month : (now.getMonth() + 1)) as Month,
       });
+      setOpen(true);
     } else if (m === 'year') {
       onChange({ mode: 'year', year });
+      setOpen(true);
     } else {
       setShowCustom(true);
     }
@@ -51,11 +77,15 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
 
   const handleMonth = (m: number) => {
     onChange({ mode: 'month', year, month: m as Month });
+    animate();
+    setOpen(false);
   };
 
   const handleYear = (y: number) => {
     setYear(y);
     onChange({ mode: 'year', year: y });
+    animate();
+    setOpen(false);
   };
 
   const applyCustom = () => {
@@ -65,10 +95,20 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
     if (startDate.getTime() > endDate.getTime()) return;
     onChange({ mode: 'custom', startISO: startDate.toISOString(), endISO: endDate.toISOString() });
     setShowCustom(false);
+    animate();
+    setOpen(false);
   };
 
   const years: number[] = [];
   for (let y = now.getFullYear(); y >= 1970; y--) years.push(y);
+
+  const changeYear = (delta: number) => {
+    const t = Date.now();
+    if (t - lastChevron.current < 300) return;
+    lastChevron.current = t;
+    animate();
+    setYear((y) => y + delta);
+  };
 
   return (
     <View
@@ -94,19 +134,34 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
           { value: 'custom', label: 'Custom' },
         ]}
       />
-      {mode === 'month' && (
+      {open && mode === 'month' && (
         <View style={{ marginTop: 8 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-            <IconButton icon="chevron-left" onPress={() => setYear(year - 1)} />
+            <IconButton icon="chevron-left" onPress={() => changeYear(-1)} />
             <Text>{year}</Text>
-            <IconButton icon="chevron-right" onPress={() => setYear(year + 1)} />
+            <IconButton icon="chevron-right" onPress={() => changeYear(1)} />
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {MONTH_LABELS.map((label, idx) => (
               <Button
                 key={label}
-                mode={scope.mode === 'month' && scope.year === year && scope.month === idx + 1 ? 'contained' : 'text'}
-                style={{ width: '33.33%' }}
+                compact
+                icon={
+                  scope.mode === 'month' && scope.year === year && scope.month === idx + 1
+                    ? 'check'
+                    : undefined
+                }
+                mode={
+                  scope.mode === 'month' && scope.year === year && scope.month === idx + 1
+                    ? 'contained'
+                    : 'text'
+                }
+                style={{ width: '33.33%', height: 44 }}
+                accessibilityLabel={`${
+                  scope.mode === 'month' && scope.year === year && scope.month === idx + 1
+                    ? 'Selected'
+                    : 'Select'
+                } ${label} ${year}`}
                 onPress={() => handleMonth(idx + 1)}
               >
                 {label}
@@ -115,24 +170,22 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
           </View>
         </View>
       )}
-      {mode === 'year' && (
+      {open && mode === 'year' && (
         <ScrollView style={{ maxHeight: 200, marginTop: 8 }}>
           {years.map((y) => (
             <List.Item
               key={y}
               title={String(y)}
               onPress={() => handleYear(y)}
+              accessibilityLabel={`${
+                scope.mode === 'year' && scope.year === y ? 'Selected' : 'Select'
+              } ${y}`}
               right={() =>
                 scope.mode === 'year' && scope.year === y ? <List.Icon icon="check" /> : null
               }
             />
           ))}
         </ScrollView>
-      )}
-      {mode === 'all' && (
-        <View style={{ marginTop: 8 }}>
-          <Text>All entries</Text>
-        </View>
       )}
       <Portal>
         <Modal visible={showCustom} onDismiss={() => setShowCustom(false)}>

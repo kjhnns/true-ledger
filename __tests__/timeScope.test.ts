@@ -1,4 +1,4 @@
-import { scopeToRange, Scope } from '../lib/timeScope';
+import { scopeToRange, Scope, scopeToLabel } from '../lib/timeScope';
 
 describe('scopeToRange', () => {
   it('handles month scope', () => {
@@ -42,5 +42,31 @@ describe('scopeToRange', () => {
       endISO: '2024-01-31T00:00:00.000Z',
     };
     expect(() => scopeToRange(scope)).toThrow('start must be before end');
+  });
+});
+
+describe('scopeToLabel', () => {
+  it('formats month scope', () => {
+    const scope: Scope = { mode: 'month', year: 2025, month: 8 };
+    expect(scopeToLabel(scope)).toBe('Aug 2025');
+  });
+
+  it('formats year scope', () => {
+    const scope: Scope = { mode: 'year', year: 2024 };
+    expect(scopeToLabel(scope)).toBe('2024');
+  });
+
+  it('formats all scope', () => {
+    const scope: Scope = { mode: 'all' };
+    expect(scopeToLabel(scope)).toBe('All');
+  });
+
+  it('formats custom scope', () => {
+    const scope: Scope = {
+      mode: 'custom',
+      startISO: '2024-01-01T00:00:00.000Z',
+      endISO: '2024-01-31T00:00:00.000Z',
+    };
+    expect(scopeToLabel(scope)).toBe('2024-01-01–2024-01-31');
   });
 });
