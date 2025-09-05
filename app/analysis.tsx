@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, TouchableOpacity, ScrollView } from 'react-native';
-import {
-  SegmentedButtons,
-  Text,
-  Card,
-  Tooltip,
-  DataTable,
-  Button,
-} from 'react-native-paper';
+import { Text, Card, Tooltip, DataTable, Button } from 'react-native-paper';
 import {
   summarizeExpensesByParent,
   ExpenseSummary,
@@ -20,30 +13,8 @@ import {
 } from '../lib/analytics';
 import { listEntities } from '../lib/entities';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-
-type RangeKey = '7d' | '1m' | 'qtd' | 'ytd';
-
-function getRange(key: RangeKey): { start: number; end: number } {
-  const now = new Date();
-  const end = now.getTime();
-  if (key === '7d') {
-    const start = new Date(end - 7 * 24 * 60 * 60 * 1000).getTime();
-    return { start, end };
-  }
-  if (key === '1m') {
-    const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const start = startDate.getTime();
-    const endDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { start, end: endDate.getTime() };
-  }
-  if (key === 'qtd') {
-    const quarter = Math.floor(now.getMonth() / 3);
-    const startDate = new Date(now.getFullYear(), quarter * 3, 1);
-    return { start: startDate.getTime(), end };
-  }
-  const startDate = new Date(now.getFullYear(), 0, 1);
-  return { start: startDate.getTime(), end };
-}
+import TimeScopePicker from './TimeScopePicker';
+import { Scope, scopeToRange, Month } from '../lib/timeScope';
 
 export default function Analysis() {
   const router = useRouter();
@@ -52,7 +23,12 @@ export default function Analysis() {
       income?: string;
       savings?: string;
     }>();
-  const [range, setRange] = useState<RangeKey>('ytd');
+  const now = new Date();
+  const [scope, setScope] = useState<Scope>({
+    mode: 'month',
+    year: now.getFullYear(),
+    month: (now.getMonth() + 1) as Month,
+  });
   const [data, setData] = useState<ExpenseSummary[]>([]);
   const [metrics, setMetrics] = useState<KeyMetrics>({
     income: 0,
@@ -68,7 +44,7 @@ export default function Analysis() {
   const [bankSummary, setBankSummary] = useState<BankTransactionSummary[]>([]);
 
   const handleExport = async () => {
-    const { start, end } = getRange(range);
+    const { start, end } = scopeToRange(scope);
     const csv = await exportReviewedTransactionsToCsv(start, end);
     const FileSystem = await import('expo-file-system');
     const Sharing = await import('expo-sharing');
@@ -81,11 +57,11 @@ export default function Analysis() {
 
   useEffect(() => {
     (async () => {
-      const { start, end } = getRange(range);
+      const { start, end } = scopeToRange(scope);
       const res = await summarizeExpensesByParent(start, end);
       setData(res);
     })();
-  }, [range]);
+  }, [scope]);
 
   useEffect(() => {
     (async () => {
@@ -116,7 +92,7 @@ export default function Analysis() {
 
   useEffect(() => {
     (async () => {
-      const { start, end } = getRange(range);
+      const { start, end } = scopeToRange(scope);
       const res = await computeKeyMetrics(start, end, selectedIncome, selectedSavings);
       setMetrics(res);
       const [count, byBank] = await Promise.all([
@@ -126,7 +102,7 @@ export default function Analysis() {
       setReviewedCount(count);
       setBankSummary(byBank);
     })();
-  }, [range, selectedIncome, selectedSavings]);
+  }, [scope, selectedIncome, selectedSavings]);
 
   const totalExpenses = data.reduce((sum, d) => sum + d.total, 0);
   const nf = new Intl.NumberFormat(undefined, {
@@ -137,6 +113,9 @@ export default function Analysis() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
+        <Button mode="contained" onPress={handleExport} style={{ marginBottom: 16 }}>
+          Generate CSV export
+        </Button>
         <Card>
           <Card.Content>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -235,31 +214,7 @@ export default function Analysis() {
           </DataTable>
         )}
       </ScrollView>
-      <View
-        style={{
-          position: 'absolute',
-          left: 16,
-          right: 16,
-          bottom: 16,
-          backgroundColor: 'white',
-          borderRadius: 4,
-          padding: 4,
-        }}
-      >
-        <Button mode="contained" onPress={handleExport} style={{ marginBottom: 8 }}>
-          Generate CSV export
-        </Button>
-        <SegmentedButtons
-          value={range}
-          onValueChange={(v) => setRange(v as RangeKey)}
-          buttons={[
-            { value: '7d', label: 'Last 7 days' },
-            { value: '1m', label: 'Last month' },
-            { value: 'qtd', label: 'Quarter to date' },
-            { value: 'ytd', label: 'Year to date' },
-          ]}
-        />
-      </View>
+      <TimeScopePicker scope={scope} onChange={setScope} />
     </View>
   );
 }
