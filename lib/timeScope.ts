@@ -8,6 +8,21 @@ export type Scope =
   | { mode: 'all' }
   | { mode: 'custom'; startISO: string; endISO: string };
 
+export const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
 const isoDate = z.string().refine((d) => !isNaN(Date.parse(d)), {
   message: 'Invalid date',
 });
@@ -39,6 +54,22 @@ export function scopeToRange(scope: Scope): { start: number; end: number } {
         start: new Date(startISO).getTime(),
         end: new Date(endISO).getTime(),
       };
+    }
+  }
+}
+
+export function scopeToLabel(scope: Scope): string {
+  switch (scope.mode) {
+    case 'month':
+      return `${MONTH_LABELS[scope.month - 1]} ${scope.year}`;
+    case 'year':
+      return String(scope.year);
+    case 'all':
+      return 'All';
+    case 'custom': {
+      const start = new Date(scope.startISO).toISOString().slice(0, 10);
+      const end = new Date(scope.endISO).toISOString().slice(0, 10);
+      return `${start}–${end}`;
     }
   }
 }

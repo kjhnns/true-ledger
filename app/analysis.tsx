@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { Text, Card, Tooltip, DataTable, Button } from 'react-native-paper';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import {
   summarizeExpensesByParent,
   ExpenseSummary,
@@ -12,9 +13,9 @@ import {
   exportReviewedTransactionsToCsv,
 } from '../lib/analytics';
 import { listEntities } from '../lib/entities';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import TimeScopePicker from './TimeScopePicker';
-import { Scope, scopeToRange, Month } from '../lib/timeScope';
+import { Scope, scopeToRange, Month, scopeToLabel } from '../lib/timeScope';
+import * as SecureStore from 'expo-secure-store';
 
 export default function Analysis() {
   const router = useRouter();
@@ -42,6 +43,23 @@ export default function Analysis() {
   const [selectedSavings, setSelectedSavings] = useState<string[]>([]);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [bankSummary, setBankSummary] = useState<BankTransactionSummary[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const stored = await SecureStore.getItemAsync('time-scope');
+      if (stored) {
+        try {
+          const parsed: Scope = JSON.parse(stored);
+          setScope(parsed);
+        } catch {}
+      }
+    })();
+  }, []);
+
+  const handleScopeChange = (s: Scope) => {
+    setScope(s);
+    SecureStore.setItemAsync('time-scope', JSON.stringify(s));
+  };
 
   const handleExport = async () => {
     const { start, end } = scopeToRange(scope);
@@ -112,6 +130,7 @@ export default function Analysis() {
 
   return (
     <View style={{ flex: 1 }}>
+      <Stack.Screen options={{ title: scopeToLabel(scope) }} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
         <Button mode="contained" onPress={handleExport} style={{ marginBottom: 16 }}>
           Generate CSV export
@@ -214,7 +233,7 @@ export default function Analysis() {
           </DataTable>
         )}
       </ScrollView>
-      <TimeScopePicker scope={scope} onChange={setScope} />
+      <TimeScopePicker scope={scope} onChange={handleScopeChange} />
     </View>
   );
 }
