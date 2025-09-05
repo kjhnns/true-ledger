@@ -418,7 +418,7 @@ export default function StatementTransactions() {
                   const signed = isBankSender ? `- ${nf.format(displayAmountVal)}` : isBankRecipient ? `+ ${nf.format(displayAmountVal)}` : nf.format(displayAmountVal);
                   return (
                     <View key={item.id} style={{ marginBottom: 12 }}>
-                      <Card>
+                      <Card mode="outlined" style={{ elevation: 0 }}>
                         <Card.Content>
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <View style={{ marginRight: 8 }}>
@@ -479,7 +479,9 @@ export default function StatementTransactions() {
             <View style={{ padding: 8 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 18, fontWeight: '700' }}>Edit transaction</Text>
-                <Button onPress={markEditingReviewed}>Mark reviewed</Button>
+                <Button mode="outlined" onPress={markEditingReviewed}>
+                  Mark reviewed
+                </Button>
               </View>
               <ScrollView>
                 <View style={{ marginTop: 12 }}>
@@ -557,7 +559,7 @@ export default function StatementTransactions() {
                 <View style={{ marginTop: 12 }}>
                   <Text>Sender</Text>
                   <Button
-                    mode="text"
+                    mode="outlined"
                     onPress={() => openEntityPicker(editing.txn.id, 'sender')}
                     style={{ alignSelf: 'flex-start', marginTop: 6 }}
                   >
@@ -568,7 +570,7 @@ export default function StatementTransactions() {
                 <View style={{ marginTop: 12 }}>
                   <Text>Recipient</Text>
                   <Button
-                    mode="text"
+                    mode="outlined"
                     onPress={() => openEntityPicker(editing.txn.id, 'recipient')}
                     style={{ alignSelf: 'flex-start', marginTop: 6 }}
                   >

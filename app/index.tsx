@@ -299,20 +299,24 @@ export default function Index() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Chip
-                mode={!filterBankId ? 'flat' : 'outlined'}
-                selected={!filterBankId}
+                mode="outlined"
                 onPress={() => setFilterBankId(null)}
-                style={{ marginRight: 8 }}
+                style={{
+                  marginRight: 8,
+                  backgroundColor: !filterBankId ? '#F5F5F5' : undefined,
+                }}
               >
                 All
               </Chip>
               {bankAccounts.map((b) => (
                 <Chip
                   key={b.id}
-                  mode={filterBankId === b.id ? 'flat' : 'outlined'}
-                  selected={filterBankId === b.id}
+                  mode="outlined"
                   onPress={() => setFilterBankId(filterBankId === b.id ? null : b.id)}
-                  style={{ marginRight: 8 }}
+                  style={{
+                    marginRight: 8,
+                    backgroundColor: filterBankId === b.id ? '#F5F5F5' : undefined,
+                  }}
                 >
                   {b.label}
                 </Chip>
@@ -334,7 +338,11 @@ export default function Index() {
           ) : (
             <ScrollView>
                   {filtered.map((item) => (
-                    <Card key={item.id} style={{ marginBottom: 8 }}>
+                    <Card
+                      key={item.id}
+                      mode="outlined"
+                      style={{ marginBottom: 8, elevation: 0 }}
+                    >
                       <Card.Content>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <TouchableOpacity
@@ -382,15 +390,22 @@ export default function Index() {
               <Text>Are you sure you want to permanently delete this statement?</Text>
             </Dialog.Content>
             <Dialog.Actions>
-              <Button onPress={() => setConfirmVisible(false)}>Cancel</Button>
-              <Button onPress={async () => {
+              <Button mode="outlined" onPress={() => setConfirmVisible(false)}>
+                Cancel
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={async () => {
                 if (deleteTarget) {
                   await deleteStatement(deleteTarget);
                   setDeleteTarget(null);
                   setConfirmVisible(false);
                   await refreshStatements();
                 }
-              }}>Delete</Button>
+              }}
+              >
+                Delete
+              </Button>
             </Dialog.Actions>
           </Dialog>
           <Dialog visible={reprocessConfirm} onDismiss={() => setReprocessConfirm(false)}>
@@ -399,8 +414,12 @@ export default function Index() {
               <Text>Existing transactions will be dropped. Continue?</Text>
             </Dialog.Content>
             <Dialog.Actions>
-              <Button onPress={() => setReprocessConfirm(false)}>Cancel</Button>
-              <Button onPress={async () => {
+              <Button mode="outlined" onPress={() => setReprocessConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={async () => {
                 if (reprocessTarget) {
                   await reprocessStatement(reprocessTarget.id);
                   await refreshStatements();
@@ -448,7 +467,10 @@ export default function Index() {
                       refreshStatements();
                     });
                 }
-              }}>Reprocess</Button>
+              }}
+              >
+                Reprocess
+              </Button>
             </Dialog.Actions>
           </Dialog>
         </Portal>
@@ -491,16 +513,20 @@ export default function Index() {
         {/* bottom controls: archived toggle and upload button - part of normal layout */}
         <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Button
-            mode={viewArchived === 'archived' ? 'contained' : 'outlined'}
+            mode="outlined"
             icon={viewArchived === 'archived' ? 'archive-arrow-up' : 'archive'}
             onPress={() => setViewArchived(viewArchived === 'archived' ? 'current' : 'archived')}
             accessibilityLabel={viewArchived === 'archived' ? 'Show current statements' : 'Show archived statements'}
-            style={{ flex: 1, marginRight: 12 }}
+            style={{
+              flex: 1,
+              marginRight: 12,
+              backgroundColor: viewArchived === 'archived' ? '#F5F5F5' : 'transparent',
+            }}
           >
             {viewArchived === 'archived' ? 'Archived' : 'Current'}
           </Button>
 
-          <Button mode="contained" icon="upload" onPress={openUploadModal}>
+          <Button mode="outlined" icon="upload" onPress={openUploadModal}>
             Upload
           </Button>
         </View>

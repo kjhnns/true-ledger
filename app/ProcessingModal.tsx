@@ -61,7 +61,7 @@ export default function ProcessingModal({
           }}
         >
           {onAbort && <Button mode="outlined" onPress={onAbort}>Abort</Button>}
-          <Button mode="contained" onPress={onClose} disabled={!done}>
+          <Button mode="outlined" onPress={onClose} disabled={!done}>
             {done ? 'Close' : 'Wait'}
           </Button>
         </View>

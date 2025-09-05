@@ -65,7 +65,12 @@ export default function AnalysisEntities() {
           const ent = entities.find((e) => e.id === id);
           if (!ent) return null;
           return (
-            <Chip key={id} onPress={() => toggle(id)} style={{ margin: 4 }}>
+            <Chip
+              key={id}
+              mode="outlined"
+              onPress={() => toggle(id)}
+              style={{ margin: 4 }}
+            >
               {ent.label}
             </Chip>
           );
@@ -89,7 +94,7 @@ export default function AnalysisEntities() {
         ))}
       </ScrollView>
       <Button
-        mode="contained"
+        mode="outlined"
         onPress={handleSave}
         style={{ marginTop: 16, marginBottom: 16 }}
       >

@@ -52,7 +52,9 @@ export default function BankAccountsList() {
       >
         <Text style={{ fontSize: 16 }}>{item.label}</Text>
       </TouchableOpacity>
-      <Button onPress={() => confirmDelete(item.id)}>Delete</Button>
+      <Button mode="outlined" onPress={() => confirmDelete(item.id)}>
+        Delete
+      </Button>
     </View>
   );
 
@@ -60,10 +62,7 @@ export default function BankAccountsList() {
     <View style={{ flex: 1 }}>
       <FlatList data={accounts} keyExtractor={(i) => i.id} renderItem={renderItem} />
       <View style={{ padding: 16 }}>
-        <Button
-          mode="contained"
-          onPress={() => router.push('/bank-accounts/new')}
-        >
+        <Button mode="outlined" onPress={() => router.push('/bank-accounts/new')}>
           + Add bank account
         </Button>
       </View>

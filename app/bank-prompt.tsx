@@ -42,10 +42,10 @@ export default function EditBankPrompt() {
         style={{ marginBottom: 12, height: 128 }}
       />
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-        <Button onPress={() => router.back()} style={{ marginRight: 8 }}>
+        <Button mode="outlined" onPress={() => router.back()} style={{ marginRight: 8 }}>
           Cancel
         </Button>
-        <Button mode="contained" onPress={save}>
+        <Button mode="outlined" onPress={save}>
           Save
         </Button>
       </View>

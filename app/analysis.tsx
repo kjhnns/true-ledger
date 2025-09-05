@@ -132,10 +132,10 @@ export default function Analysis() {
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ title: scopeToLabel(scope) }} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
-        <Button mode="contained" onPress={handleExport} style={{ marginBottom: 16 }}>
+        <Button mode="outlined" onPress={handleExport} style={{ marginBottom: 16 }}>
           Generate CSV export
         </Button>
-        <Card>
+        <Card mode="outlined" style={{ elevation: 0 }}>
           <Card.Content>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             <View style={{ width: '50%', marginBottom: 12 }}>

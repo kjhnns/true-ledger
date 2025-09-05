@@ -152,7 +152,9 @@ export default function ExpenseCategoriesPage() {
       >
         <Text style={{ fontSize: 16 }}>{item.item.label}</Text>
       </TouchableOpacity>
-      <Button onPress={() => confirmDelete(item.item.id)}>Delete</Button>
+      <Button mode="outlined" onPress={() => confirmDelete(item.item.id)}>
+        Delete
+      </Button>
     </View>
   );
 
@@ -189,12 +191,12 @@ export default function ExpenseCategoriesPage() {
         {error ? (
           <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
         ) : null}
-        <Button mode="contained" onPress={handleSubmit}>
+        <Button mode="outlined" onPress={handleSubmit}>
           {editingId ? 'Update Category' : 'Add Category'}
         </Button>
         {editingId ? (
           <View style={{ marginTop: 8 }}>
-            <Button onPress={resetForm}>Cancel</Button>
+            <Button mode="outlined" onPress={resetForm}>Cancel</Button>
           </View>
         ) : null}
       </View>
@@ -237,7 +239,9 @@ export default function ExpenseCategoriesPage() {
                 )
               }
             />
-            <Button onPress={() => setParentVisible(false)}>Close</Button>
+            <Button mode="outlined" onPress={() => setParentVisible(false)}>
+              Close
+            </Button>
           </View>
         </View>
       </Modal>
