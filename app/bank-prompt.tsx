@@ -1,4 +1,4 @@
-import { useLocalSearchParams, router } from 'expo-router';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
@@ -31,6 +31,7 @@ export default function EditBankPrompt() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
+      <Stack.Screen options={{ title: 'Bank prompt' }} />
       <Text style={{ marginBottom: 4 }}>Bank</Text>
       <TextInput mode="outlined" value={label} editable={false} style={{ marginBottom: 12 }} />
       <Text style={{ marginBottom: 4 }}>Prompt</Text>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { Button, Chip, List, Text, useTheme } from 'react-native-paper';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   listEntities,
   Entity,
@@ -58,6 +58,7 @@ export default function AnalysisEntities() {
         backgroundColor: theme.colors.background,
       }}
     >
+      <Stack.Screen options={{ title: type ? `Define ${type}` : 'Define' }} />
       <Text variant="headlineMedium">Define {type}</Text>
       <Text>Entities that sum to the metric</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>

@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useNavigation, router } from 'expo-router';
+import { Stack, useLocalSearchParams, useNavigation, router } from 'expo-router';
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -365,6 +365,7 @@ export default function StatementTransactions() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
+      <Stack.Screen options={{ title: meta?.bank ?? 'Statement' }} />
       {meta && nf && (
         <View style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

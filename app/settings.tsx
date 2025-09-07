@@ -8,7 +8,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import * as SecureStore from "expo-secure-store";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import {
   DEFAULT_SYSTEM_PROMPT,
   DEFAULT_LEARN_PROMPT,
@@ -177,6 +177,7 @@ const handleRemove = () => {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
+      <Stack.Screen options={{ title: 'Settings' }} />
       <ManageButtons />
       <Divider style={{ marginVertical: 16 }} />
       <Text variant="titleMedium" style={{ marginBottom: 8 }}>

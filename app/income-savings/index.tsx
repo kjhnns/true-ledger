@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { ScrollView, View, Alert } from 'react-native';
 import { Button, IconButton, List, SegmentedButtons, Text, TextInput } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
+import { Stack } from 'expo-router';
 import { createEntity, deleteEntity, listEntities, Entity } from '../../lib/entities';
 
 export default function IncomeSavingsPage() {
@@ -55,6 +56,7 @@ export default function IncomeSavingsPage() {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16 }}>
+      <Stack.Screen options={{ title: 'Income & savings' }} />
       <SegmentedButtons
         value={type}
         onValueChange={(v) => setType(v as 'income' | 'savings')}

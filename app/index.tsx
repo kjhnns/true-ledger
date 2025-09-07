@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Linking from 'expo-linking';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState, useCallback } from 'react';
 import { ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
@@ -255,15 +255,25 @@ export default function Index() {
   }, []);
 
   const ImportRoute = () => {
-  const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
+    const [viewArchived, setViewArchived] = useState<'current' | 'archived'>('current');
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
     const [reprocessConfirm, setReprocessConfirm] = useState(false);
     const [reprocessTarget, setReprocessTarget] = useState<StatementMeta | null>(null);
-  const [bankAccounts, setBankAccounts] = useState<import('../lib/entities').Entity[]>([]);
-  const [filterBankId, setFilterBankId] = useState<string | null>(null);
+    const [bankAccounts, setBankAccounts] = useState<import('../lib/entities').Entity[]>([]);
+    const [filterBankId, setFilterBankId] = useState<string | null>(null);
+    const [hasApiKey, setHasApiKey] = useState(true);
     const { width, height } = useWindowDimensions();
     const isLandscape = width > height;
+
+    useFocusEffect(
+      useCallback(() => {
+        (async () => {
+          const key = await SecureStore.getItemAsync(OPENAI_KEY_STORAGE_KEY);
+          setHasApiKey(!!key);
+        })();
+      }, [])
+    );
 
     const formatRange = (start: number | null, end: number | null) => {
       if (!start || !end) return '-';
@@ -293,6 +303,19 @@ export default function Index() {
 
     return (
       <View style={{ flex: 1, padding: 16 }}>
+        {!hasApiKey && (
+          <Card
+            mode="outlined"
+            style={{ marginBottom: 12, backgroundColor: '#FFF4E5' }}
+          >
+            <Card.Content>
+              <Text>
+                OpenAI API key missing. Add one in Settings to upload and parse
+                transactions.
+              </Text>
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Bank filter chips - top, intrinsic height */}
         <View style={{ marginBottom: 12 }}>
@@ -555,6 +578,11 @@ export default function Index() {
 
   return (
     <>
+      <Stack.Screen
+        options={{
+          title: navIndex === 0 ? 'Transactions' : navRoutes[navIndex].title,
+        }}
+      />
       <BottomNavigation
         navigationState={{ index: navIndex, routes: navRoutes }}
         onIndexChange={setNavIndex}

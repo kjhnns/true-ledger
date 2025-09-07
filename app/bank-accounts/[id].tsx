@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { getBankAccount, updateBankAccount } from '../../lib/entities';
 import BankAccountForm from './form';
@@ -24,13 +24,16 @@ export default function EditBankAccount() {
   if (!initial) return null;
 
   return (
-    <BankAccountForm
-      initial={initial}
-      submitLabel="Save"
-      onSubmit={async (input) => {
-        await updateBankAccount(id, input);
-        router.back();
-      }}
-    />
+    <>
+      <Stack.Screen options={{ title: 'Edit bank account' }} />
+      <BankAccountForm
+        initial={initial}
+        submitLabel="Save"
+        onSubmit={async (input) => {
+          await updateBankAccount(id, input);
+          router.back();
+        }}
+      />
+    </>
   );
 }
