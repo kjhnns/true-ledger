@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, TouchableOpacity, View } from 'react-native';
 import { Button, Text } from 'react-native-paper';
-import { router } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   BankAccount,
@@ -60,6 +60,7 @@ export default function BankAccountsList() {
 
   return (
     <View style={{ flex: 1 }}>
+      <Stack.Screen options={{ title: 'Bank accounts' }} />
       <FlatList data={accounts} keyExtractor={(i) => i.id} renderItem={renderItem} />
       <View style={{ padding: 16 }}>
         <Button mode="outlined" onPress={() => router.push('/bank-accounts/new')}>

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, FlatList, Modal, TouchableOpacity, View } from 'react-native';
 import { Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
+import { Stack } from 'expo-router';
 import {
   ExpenseCategory,
   ExpenseCategoryInput,
@@ -160,6 +161,7 @@ export default function ExpenseCategoriesPage() {
 
   return (
     <View style={{ flex: 1 }}>
+      <Stack.Screen options={{ title: 'Expense categories' }} />
       <View style={{ padding: 16, borderBottomWidth: 1 }}>
         <Text style={{ marginBottom: 4 }}>Label</Text>
         <TextInput
