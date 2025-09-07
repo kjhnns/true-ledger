@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "true-ledger",
-    "slug": "true-ledger",
+    "name": "CashU",
+    "slug": "CashU",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
