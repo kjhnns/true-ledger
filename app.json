@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "CashU",
-    "slug": "CashU",
+    "name": "expensu",
+    "slug": "true-ledger",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "trueledger",
+    "scheme": "expensu",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.johannesklumpe.expensu",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,8 +24,15 @@
       "intentFilters": [
         {
           "action": "SEND",
-          "category": ["BROWSABLE", "DEFAULT"],
-          "data": [{ "mimeType": "application/pdf" }]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "mimeType": "application/pdf"
+            }
+          ]
         }
       ]
     },
@@ -52,9 +63,7 @@
       }
     },
     "owner": "johannesklumpe",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/58236ea4-9adf-49e4-a1e5-ab0595af9e28"
     }
