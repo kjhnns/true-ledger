@@ -17,7 +17,11 @@ import TimeScopePicker from './TimeScopePicker';
 import { Scope, scopeToRange, Month, scopeToLabel } from '../lib/timeScope';
 import * as SecureStore from 'expo-secure-store';
 
-export default function Analysis() {
+export default function Analysis({
+  onTitleChange,
+}: {
+  onTitleChange?: (title: string) => void;
+}) {
   const router = useRouter();
   const { income: incomeParam, savings: savingsParam } =
     useLocalSearchParams<{
@@ -43,6 +47,11 @@ export default function Analysis() {
   const [selectedSavings, setSelectedSavings] = useState<string[]>([]);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [bankSummary, setBankSummary] = useState<BankTransactionSummary[]>([]);
+  const title = scopeToLabel(scope);
+
+  useEffect(() => {
+    onTitleChange?.(title);
+  }, [title, onTitleChange]);
 
   useEffect(() => {
     (async () => {
@@ -130,7 +139,7 @@ export default function Analysis() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack.Screen options={{ title: scopeToLabel(scope) }} />
+      {!onTitleChange && <Stack.Screen options={{ title }} />}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
         <Button mode="outlined" onPress={handleExport} style={{ marginBottom: 16 }}>
           Generate CSV export
