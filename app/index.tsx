@@ -125,8 +125,8 @@ export default function Index() {
   const router = useRouter();
   const navigation = useNavigation();
   const [navIndex, setNavIndex] = useState(0);
-  const [analysisTitle, setAnalysisTitle] = useState('Analysis');
-  const [navRoutes] = useState([
+  const [analysisLabel, setAnalysisLabel] = useState('Analysis');
+  const [navRoutes, setNavRoutes] = useState([
     {
       key: 'import',
       title: 'Import',
@@ -163,7 +163,15 @@ export default function Index() {
   const [progress, setProgress] = useState<Record<string, number>>({});
   const showToast = (message: string) => setToast({ visible: true, message });
 
-  const title = navTitleForIndex(navIndex, analysisTitle, navRoutes);
+  const title = navTitleForIndex(navIndex, analysisLabel, navRoutes);
+
+  useEffect(() => {
+    setNavRoutes((routes) => {
+      const updated = [...routes];
+      updated[1] = { ...routes[1], title: analysisLabel };
+      return updated;
+    });
+  }, [analysisLabel]);
 
   useEffect(() => {
     navigation.setOptions({ title });
@@ -599,7 +607,7 @@ export default function Index() {
 
     const AnalysisRoute = () => (
       <View style={{ flex: 1 }}>
-        <Analysis onTitleChange={setAnalysisTitle} />
+        <Analysis onTitleChange={setAnalysisLabel} />
       </View>
     );
 
