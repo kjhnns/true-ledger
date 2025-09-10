@@ -125,16 +125,29 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
         zIndex: 1,
       }}
     >
-      <SegmentedButtons
-        value={mode}
-        onValueChange={(v) => handleModeChange(v as Mode)}
-        buttons={[
-          { value: 'month', label: 'Month', onPress: () => handleModeChange('month') },
-          { value: 'year', label: 'Year', onPress: () => handleModeChange('year') },
-          { value: 'all', label: 'All', onPress: () => handleModeChange('all') },
-          { value: 'custom', label: 'Custom', onPress: () => handleModeChange('custom') },
-        ]}
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <SegmentedButtons
+          style={{ flex: 1 }}
+          value={mode}
+          onValueChange={(v) => handleModeChange(v as Mode)}
+          buttons={[
+            { value: 'month', label: 'Month' },
+            { value: 'year', label: 'Year' },
+            { value: 'all', label: 'All' },
+            { value: 'custom', label: 'Custom' },
+          ]}
+        />
+        <IconButton
+          icon={open ? 'chevron-down' : 'chevron-up'}
+          accessibilityLabel={open ? 'Hide time options' : 'Show time options'}
+          onPress={() => {
+            if (mode === 'month' || mode === 'year') {
+              animate();
+              setOpen((o) => !o);
+            }
+          }}
+        />
+      </View>
       {open && mode === 'month' && (
         <View style={{ marginTop: 8 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
