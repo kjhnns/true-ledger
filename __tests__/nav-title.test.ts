@@ -11,8 +11,8 @@ describe('navTitleForIndex', () => {
     expect(navTitleForIndex(0, 'Any', routes)).toBe('Transactions');
   });
 
-  it('returns analysis title for second tab', () => {
-    expect(navTitleForIndex(1, 'March', routes)).toBe('March');
+  it('returns fixed title for analysis tab', () => {
+    expect(navTitleForIndex(1, 'March', routes)).toBe('Analysis');
   });
 
   it('falls back to route title for others', () => {

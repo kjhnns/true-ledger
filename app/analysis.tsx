@@ -47,11 +47,11 @@ export default function Analysis({
   const [selectedSavings, setSelectedSavings] = useState<string[]>([]);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [bankSummary, setBankSummary] = useState<BankTransactionSummary[]>([]);
-  const title = scopeToLabel(scope);
+  const timeframeLabel = scopeToLabel(scope);
 
   useEffect(() => {
-    onTitleChange?.(title);
-  }, [title, onTitleChange]);
+    onTitleChange?.(timeframeLabel);
+  }, [timeframeLabel, onTitleChange]);
 
   useEffect(() => {
     (async () => {
@@ -139,7 +139,7 @@ export default function Analysis({
 
   return (
     <View style={{ flex: 1 }}>
-      {!onTitleChange && <Stack.Screen options={{ title }} />}
+      {!onTitleChange && <Stack.Screen options={{ title: 'Analysis' }} />}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
         <Button mode="outlined" onPress={handleExport} style={{ marginBottom: 16 }}>
           Generate CSV export
