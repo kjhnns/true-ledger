@@ -126,7 +126,7 @@ export default function Index() {
   const navigation = useNavigation();
   const [navIndex, setNavIndex] = useState(0);
   const [analysisLabel, setAnalysisLabel] = useState('Analysis');
-  const [navRoutes, setNavRoutes] = useState([
+  const navRoutes = [
     {
       key: 'import',
       title: 'Import',
@@ -145,7 +145,7 @@ export default function Index() {
       focusedIcon: 'cog',
       unfocusedIcon: 'cog-outline',
     },
-  ]);
+  ];
   const [statements, setStatements] = useState<StatementMeta[]>([]);
   const [banks, setBanks] = useState<Entity[]>([]);
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
@@ -164,14 +164,6 @@ export default function Index() {
   const showToast = (message: string) => setToast({ visible: true, message });
 
   const title = navTitleForIndex(navIndex, analysisLabel, navRoutes);
-
-  useEffect(() => {
-    setNavRoutes((routes) => {
-      const updated = [...routes];
-      updated[1] = { ...routes[1], title: analysisLabel };
-      return updated;
-    });
-  }, [analysisLabel]);
 
   useEffect(() => {
     navigation.setOptions({ title });

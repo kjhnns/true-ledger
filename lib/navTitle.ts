@@ -1,10 +1,10 @@
 export const navTitleForIndex = (
   index: number,
-  _analysisTitle: string,
+  analysisTitle: string,
   routes: { title: string }[],
 ): string =>
   index === 0
     ? 'Transactions'
     : index === 1
-    ? 'Analysis'
+    ? analysisTitle
     : routes[index]?.title ?? '';
