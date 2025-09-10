@@ -96,10 +96,11 @@ function ActionMenu({
   );
 }
 
-export default function Index() {
-  const router = useRouter();
-  const [navIndex, setNavIndex] = useState(0);
-  const [navRoutes] = useState([
+  export default function Index() {
+    const router = useRouter();
+    const [navIndex, setNavIndex] = useState(0);
+    const [analysisTitle, setAnalysisTitle] = useState('Analysis');
+    const [navRoutes] = useState([
     {
       key: 'import',
       title: 'Import',
@@ -564,30 +565,47 @@ export default function Index() {
     </View>
   );
 
-  const AnalysisRoute = () => (
-    <View style={{ flex: 1 }}>
-      <Analysis />
-    </View>
-  );
+    const AnalysisRoute = () => (
+      <View style={{ flex: 1 }}>
+        <Analysis onTitleChange={setAnalysisTitle} />
+      </View>
+    );
 
-  const renderScene = BottomNavigation.SceneMap({
-    import: ImportRoute,
-    analysis: AnalysisRoute,
-    settings: SettingsRoute,
-  });
+    const renderScene = ({
+      route,
+    }: {
+      route: { key: string };
+      jumpTo: (key: string) => void;
+    }) => {
+      switch (route.key) {
+        case 'import':
+          return <ImportRoute />;
+        case 'analysis':
+          return <AnalysisRoute />;
+        case 'settings':
+          return <SettingsRoute />;
+        default:
+          return null;
+      }
+    };
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: navIndex === 0 ? 'Transactions' : navRoutes[navIndex].title,
-        }}
-      />
-      <BottomNavigation
-        navigationState={{ index: navIndex, routes: navRoutes }}
-        onIndexChange={setNavIndex}
-        renderScene={renderScene}
-      />
+        <Stack.Screen
+          options={{
+            title:
+              navIndex === 0
+                ? 'Transactions'
+                : navIndex === 1
+                ? analysisTitle
+                : navRoutes[navIndex].title,
+          }}
+        />
+        <BottomNavigation
+          navigationState={{ index: navIndex, routes: navRoutes }}
+          onIndexChange={setNavIndex}
+          renderScene={renderScene}
+        />
       <Snackbar
         visible={toast.visible}
         onDismiss={() => setToast({ visible: false, message: '' })}
