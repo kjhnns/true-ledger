@@ -20,7 +20,6 @@ import {
 } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
-import { navTitleForIndex } from '../lib/navTitle';
 import {
   DEFAULT_SYSTEM_PROMPT,
   OPENAI_KEY_STORAGE_KEY,
@@ -40,6 +39,12 @@ import {
 import Analysis from './analysis';
 import Settings from './settings';
 import UploadModal from './UploadModal';
+
+const navigationTitles = ['Transactions', 'Analysis', 'Settings'] as const;
+const navTitleForIndex = (
+  index: number
+): string =>    navigationTitles[index] ?? '';
+
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -125,7 +130,6 @@ export default function Index() {
   const router = useRouter();
   const navigation = useNavigation();
   const [navIndex, setNavIndex] = useState(0);
-  const [analysisLabel, setAnalysisLabel] = useState('Analysis');
   const navRoutes = [
     {
       key: 'import',
@@ -163,7 +167,7 @@ export default function Index() {
   const [progress, setProgress] = useState<Record<string, number>>({});
   const showToast = (message: string) => setToast({ visible: true, message });
 
-  const title = navTitleForIndex(navIndex, analysisLabel, navRoutes);
+  const title = navTitleForIndex(navIndex);
 
   useEffect(() => {
     navigation.setOptions({ title });
