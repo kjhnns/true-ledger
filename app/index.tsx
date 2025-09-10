@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import {
   BottomNavigation,
@@ -19,12 +20,14 @@ import {
 } from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
+import { navTitleForIndex } from '../lib/navTitle';
 import {
   DEFAULT_SYSTEM_PROMPT,
   OPENAI_KEY_STORAGE_KEY,
   processStatementFile,
   SYSTEM_PROMPT_STORAGE_KEY,
 } from '../lib/openai';
+import { fileFromShareUrl } from '../lib/share';
 import {
   archiveStatement,
   createStatement,
@@ -34,12 +37,9 @@ import {
   StatementMeta,
   unarchiveStatement,
 } from '../lib/statements';
-import { fileFromShareUrl } from '../lib/share';
+import Analysis from './analysis';
 import Settings from './settings';
 import UploadModal from './UploadModal';
-import Analysis from './analysis';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { navTitleForIndex } from '../lib/navTitle';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -599,7 +599,7 @@ export default function Index() {
 
     const AnalysisRoute = () => (
       <View style={{ flex: 1 }}>
-        <Analysis onTitleChange={setAnalysisLabel} />
+        <Analysis />
       </View>
     );
 

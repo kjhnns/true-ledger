@@ -1,22 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  ScrollView,
   LayoutAnimation,
-  Platform,
-  UIManager,
+  ScrollView,
+  View
 } from 'react-native';
 import {
   Button,
+  IconButton,
+  List,
   Modal,
   Portal,
   SegmentedButtons,
   Text,
-  IconButton,
-  List,
   TextInput,
 } from 'react-native-paper';
-import { Mode, Scope, Month, MONTH_LABELS } from '../lib/timeScope';
+import { Mode, Month, MONTH_LABELS, Scope } from '../lib/timeScope';
 
 interface Props {
   scope: Scope;
@@ -32,14 +30,20 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
   const [year, setYear] = useState(
     scope.mode === 'month' || scope.mode === 'year' ? scope.year : now.getFullYear()
   );
+  const [previewMonth, setPreviewMonth] = useState<number | null>(
+    scope.mode === 'month' ? (scope.month as number) : null
+  );
+  const [previewYear, setPreviewYear] = useState<number | null>(
+    scope.mode === 'year' ? scope.year : null
+  );
   const [showCustom, setShowCustom] = useState(false);
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const lastChevron = useRef(0);
 
-  if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
+  // if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  //   UIManager.setLayoutAnimationEnabledExperimental(true);
+  // }
 
   const animate = () => {
     LayoutAnimation.configureNext(
@@ -52,22 +56,41 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
     if (scope.mode === 'month' || scope.mode === 'year') {
       setYear(scope.year);
     }
+    // keep local previews in sync with incoming scope
+    if (scope.mode === 'month') {
+      setPreviewMonth(scope.month as number);
+      setPreviewYear(null);
+    } else if (scope.mode === 'year') {
+      setPreviewYear(scope.year);
+      setPreviewMonth(null);
+    } else {
+      setPreviewMonth(null);
+      setPreviewYear(null);
+    }
   }, [scope]);
 
   const handleModeChange = (m: Mode) => {
     animate();
     setMode(m);
+    // only the clicked segment should show its selected label
+    if (m === 'all') {
+      setPreviewMonth(null);
+      setPreviewYear(null);
+    }
     if (m === 'all') {
       onChange({ mode: 'all' });
       setOpen(false);
     } else if (m === 'month') {
-      onChange({
-        mode: 'month',
-        year,
-        month: (scope.mode === 'month' ? scope.month : (now.getMonth() + 1)) as Month,
-      });
+      // show a preview month immediately; keep year label default
+      const pm = (scope.mode === 'month' ? (scope.month as number) : (now.getMonth() + 1));
+      setPreviewMonth(pm);
+      setPreviewYear(null);
+      onChange({ mode: 'month', year, month: pm as Month });
       setOpen(true);
     } else if (m === 'year') {
+      // show a preview year immediately; keep month label default
+      setPreviewYear(year);
+      setPreviewMonth(null);
       onChange({ mode: 'year', year });
       setOpen(true);
     } else {
@@ -76,14 +99,18 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
   };
 
   const handleMonth = (m: number) => {
-    onChange({ mode: 'month', year, month: m as Month });
+  setPreviewMonth(m);
+  setPreviewYear(null);
+  onChange({ mode: 'month', year, month: m as Month });
     animate();
     setOpen(false);
   };
 
   const handleYear = (y: number) => {
-    setYear(y);
-    onChange({ mode: 'year', year: y });
+  setYear(y);
+  setPreviewYear(y);
+  setPreviewMonth(null);
+  onChange({ mode: 'year', year: y });
     animate();
     setOpen(false);
   };
@@ -126,17 +153,32 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <SegmentedButtons
-          style={{ flex: 1 }}
-          value={mode}
-          onValueChange={(v) => handleModeChange(v as Mode)}
-          buttons={[
-            { value: 'month', label: 'Month' },
-            { value: 'year', label: 'Year' },
-            { value: 'all', label: 'All' },
-            { value: 'custom', label: 'Custom' },
-          ]}
-        />
+          {/** compute labels so only the active segment shows a preview value */}
+          {
+            (() => {
+              let monthLabel = 'Month';
+              let yearLabel = 'Year';
+              if (previewMonth !== null && typeof previewMonth === 'number') {
+                monthLabel = MONTH_LABELS[previewMonth - 1];
+              }
+              if (previewYear !== null && typeof previewYear === 'number') {
+                yearLabel = String(previewYear);
+              }
+              return (
+                <SegmentedButtons
+                  style={{ flex: 1 }}
+                  value={mode}
+                  onValueChange={(v) => handleModeChange(v as Mode)}
+                  buttons={[
+                    { value: 'month', label: monthLabel },
+                    { value: 'year', label: yearLabel },
+                    { value: 'all', label: 'All' },
+                    { value: 'custom', label: 'Custom' },
+                  ]}
+                />
+              );
+            })()
+          }
         <IconButton
           icon={open ? 'chevron-down' : 'chevron-up'}
           accessibilityLabel={open ? 'Hide time options' : 'Show time options'}
