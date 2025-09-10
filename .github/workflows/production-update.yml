@@ -11,9 +11,10 @@ jobs:
         with: { node-version: "20" }
       - run: npm ci
       - run: npx expo-doctor --fix --ci || true
+      - run: npm install -g eas-cli
+      # Use the globally installed eas-cli to ensure the command is available
       - name: EAS Update to Staging
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           APP_ENV: staging
-        # Use the locally installed eas-cli to avoid version drift
-        run: npx --no-install eas update --channel staging --non-interactive --message "CI ${GITHUB_SHA}"
+        run: eas update --channel staging --non-interactive --message "CI ${GITHUB_SHA}"
