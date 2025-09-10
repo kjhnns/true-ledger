@@ -1,20 +1,45 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Linking from 'expo-linking';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState, useCallback } from 'react';
 import { ScrollView, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { BottomNavigation, Button, Card, Chip, Dialog, IconButton, Menu, Portal, Snackbar, Text } from 'react-native-paper';
+import {
+  BottomNavigation,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  IconButton,
+  Menu,
+  Portal,
+  Snackbar,
+  Text,
+} from 'react-native-paper';
 import { loadBanksForModal } from '../lib/banks';
 import { Entity, listBankAccounts } from '../lib/entities';
-import { DEFAULT_SYSTEM_PROMPT, OPENAI_KEY_STORAGE_KEY, processStatementFile, SYSTEM_PROMPT_STORAGE_KEY } from '../lib/openai';
-import { archiveStatement, createStatement, deleteStatement, listStatementsWithMeta, reprocessStatement, StatementMeta, unarchiveStatement } from '../lib/statements';
+import {
+  DEFAULT_SYSTEM_PROMPT,
+  OPENAI_KEY_STORAGE_KEY,
+  processStatementFile,
+  SYSTEM_PROMPT_STORAGE_KEY,
+} from '../lib/openai';
+import {
+  archiveStatement,
+  createStatement,
+  deleteStatement,
+  listStatementsWithMeta,
+  reprocessStatement,
+  StatementMeta,
+  unarchiveStatement,
+} from '../lib/statements';
 import { fileFromShareUrl } from '../lib/share';
 import Settings from './settings';
 import UploadModal from './UploadModal';
 import Analysis from './analysis';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { navTitleForIndex } from '../lib/navTitle';
 
 function StatusRow({ item }: { item: StatementMeta }) {
   const statuses = [
@@ -96,11 +121,12 @@ function ActionMenu({
   );
 }
 
-  export default function Index() {
-    const router = useRouter();
-    const [navIndex, setNavIndex] = useState(0);
-    const [analysisTitle, setAnalysisTitle] = useState('Analysis');
-    const [navRoutes] = useState([
+export default function Index() {
+  const router = useRouter();
+  const navigation = useNavigation();
+  const [navIndex, setNavIndex] = useState(0);
+  const [analysisTitle, setAnalysisTitle] = useState('Analysis');
+  const [navRoutes] = useState([
     {
       key: 'import',
       title: 'Import',
@@ -136,6 +162,12 @@ function ActionMenu({
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [progress, setProgress] = useState<Record<string, number>>({});
   const showToast = (message: string) => setToast({ visible: true, message });
+
+  const title = navTitleForIndex(navIndex, analysisTitle, navRoutes);
+
+  useEffect(() => {
+    navigation.setOptions({ title });
+  }, [navigation, title]);
 
   const refreshStatements = useCallback(async () => {
     const list = await listStatementsWithMeta();
@@ -591,21 +623,11 @@ function ActionMenu({
 
   return (
     <>
-        <Stack.Screen
-          options={{
-            title:
-              navIndex === 0
-                ? 'Transactions'
-                : navIndex === 1
-                ? analysisTitle
-                : navRoutes[navIndex].title,
-          }}
-        />
-        <BottomNavigation
-          navigationState={{ index: navIndex, routes: navRoutes }}
-          onIndexChange={setNavIndex}
-          renderScene={renderScene}
-        />
+      <BottomNavigation
+        navigationState={{ index: navIndex, routes: navRoutes }}
+        onIndexChange={setNavIndex}
+        renderScene={renderScene}
+      />
       <Snackbar
         visible={toast.visible}
         onDismiss={() => setToast({ visible: false, message: '' })}
