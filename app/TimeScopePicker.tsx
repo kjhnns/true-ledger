@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
-  TextInput,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -15,6 +14,7 @@ import {
   Text,
   IconButton,
   List,
+  TextInput,
 } from 'react-native-paper';
 import { Mode, Scope, Month, MONTH_LABELS } from '../lib/timeScope';
 
@@ -122,6 +122,7 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
         borderTopLeftRadius: 12,
         borderTopRightRadius: 12,
         elevation: 3,
+        zIndex: 1,
       }}
     >
       <SegmentedButtons
