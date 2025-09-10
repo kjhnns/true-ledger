@@ -141,9 +141,9 @@ export default function Analysis({
     <View style={{ flex: 1 }}>
       {!onTitleChange && <Stack.Screen options={{ title: 'Analysis' }} />}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
-        <Button mode="outlined" onPress={handleExport} style={{ marginBottom: 16 }}>
-          Generate CSV export
-        </Button>
+        <Text style={{ marginBottom: 16 }}>
+          Selected {reviewedCount} reviewed transactions for this timeframe
+        </Text>
         <Card mode="outlined" style={{ elevation: 0 }}>
           <Card.Content>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -222,9 +222,6 @@ export default function Analysis({
             ))}
           </DataTable>
         )}
-        <Text style={{ marginTop: 16 }}>
-          Selected {reviewedCount} reviewed transactions for this timeframe
-        </Text>
         {bankSummary.length > 0 && (
           <DataTable style={{ marginTop: 16 }}>
             <DataTable.Header>
@@ -241,6 +238,9 @@ export default function Analysis({
             ))}
           </DataTable>
         )}
+        <Button mode="outlined" onPress={handleExport} style={{ marginTop: 16 }}>
+          Generate CSV export
+        </Button>
       </ScrollView>
       <TimeScopePicker scope={scope} onChange={handleScopeChange} />
     </View>
