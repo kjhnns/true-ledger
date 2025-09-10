@@ -128,10 +128,10 @@ export default function TimeScopePicker({ scope, onChange }: Props) {
         value={mode}
         onValueChange={(v) => handleModeChange(v as Mode)}
         buttons={[
-          { value: 'month', label: 'Month' },
-          { value: 'year', label: 'Year' },
-          { value: 'all', label: 'All' },
-          { value: 'custom', label: 'Custom' },
+          { value: 'month', label: 'Month', onPress: () => handleModeChange('month') },
+          { value: 'year', label: 'Year', onPress: () => handleModeChange('year') },
+          { value: 'all', label: 'All', onPress: () => handleModeChange('all') },
+          { value: 'custom', label: 'Custom', onPress: () => handleModeChange('custom') },
         ]}
       />
       {open && mode === 'month' && (
