@@ -39,11 +39,7 @@ import {
 import Analysis from './analysis';
 import Settings from './settings';
 import UploadModal from './UploadModal';
-
-const navigationTitles = ['Transactions', 'Analysis', 'Settings'] as const;
-const navTitleForIndex = (
-  index: number
-): string =>    navigationTitles[index] ?? '';
+import { navTitleForIndex } from '../lib/navigation';
 
 
 function StatusRow({ item }: { item: StatementMeta }) {
@@ -603,7 +599,7 @@ export default function Index() {
 
     const AnalysisRoute = () => (
       <View style={{ flex: 1 }}>
-        <Analysis />
+        <Analysis showTitle={false} />
       </View>
     );
 
