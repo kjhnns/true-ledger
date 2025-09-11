@@ -17,7 +17,11 @@ import { listEntities } from '../lib/entities';
 import { Month, Scope, scopeToRange } from '../lib/timeScope';
 import TimeScopePicker from './TimeScopePicker';
 
-export default function Analysis() {
+export default function Analysis({
+  showTitle = true,
+}: {
+  showTitle?: boolean;
+}) {
   const router = useRouter();
   const { income: incomeParam, savings: savingsParam } =
     useLocalSearchParams<{
@@ -132,7 +136,7 @@ export default function Analysis() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack.Screen options={{ title: 'Analysis' }} />
+      {showTitle && <Stack.Screen options={{ title: 'Analysis' }} />}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
         <Text style={{ marginBottom: 16 }}>
           Selected {reviewedCount} reviewed transactions for this timeframe
