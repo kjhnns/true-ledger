@@ -40,6 +40,20 @@ function formatDate(dateString: string | null) {
   return date.toLocaleDateString();
 }
 
+function LocalDbButton() {
+  const router = useRouter();
+  return (
+    <View>
+      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+        Local database
+      </Text>
+      <Button mode="outlined" onPress={() => router.push('/local-db')}>
+        Manage local database
+      </Button>
+    </View>
+  );
+}
+
 function ManageButtons() {
   const router = useRouter();
   return (
@@ -213,12 +227,14 @@ export default function Settings() {
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
         >
-          <Stack.Screen options={{ title: 'Settings' }} />
-          <ManageButtons />
-          <Divider style={{ marginVertical: 16 }} />
-          <Text variant="titleMedium" style={{ marginBottom: 8 }}>
-            System prompt
-          </Text>
+            <Stack.Screen options={{ title: 'Settings' }} />
+            <LocalDbButton />
+            <Divider style={{ marginVertical: 16 }} />
+            <ManageButtons />
+            <Divider style={{ marginVertical: 16 }} />
+            <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+              System prompt
+            </Text>
           <TextInput
             ref={promptRef}
             mode="outlined"
