@@ -63,6 +63,7 @@
       }
     },
     "owner": "johannesklumpe",
+    "sdkVersion": "54.0.0",
     "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/58236ea4-9adf-49e4-a1e5-ab0595af9e28"
