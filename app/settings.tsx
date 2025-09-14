@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { Alert, ScrollView, View, Keyboard } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+} from "react-native";
 import {
   Button,
   Divider,
@@ -16,7 +24,12 @@ import {
   SYSTEM_PROMPT_STORAGE_KEY,
   LEARN_PROMPT_STORAGE_KEY,
 } from "../lib/openai";
-import { DEFAULT_SHARED_PERCENT, getDefaultSharedPercent, setDefaultSharedPercent } from "../lib/settings";
+import {
+  DEFAULT_SHARED_PERCENT,
+  getDefaultSharedPercent,
+  setDefaultSharedPercent,
+} from "../lib/settings";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const UPDATED_AT_KEY = "openai_api_key_updated_at";
 
@@ -65,6 +78,11 @@ export default function Settings() {
   const [learnPrompt, setLearnPrompt] = useState("");
   const [sharedPercent, setSharedPercent] = useState<number>(DEFAULT_SHARED_PERCENT);
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const promptRef = useRef<TextInput>(null);
+  const learnPromptRef = useRef<TextInput>(null);
+  const sharedPercentRef = useRef<TextInput>(null);
+  const apiKeyRef = useRef<TextInput>(null);
 
   useEffect(() => {
     (async () => {
@@ -102,7 +120,7 @@ export default function Settings() {
     Alert.alert(hasKey ? "Key updated." : "Key saved securely.");
   };
 
-const handleRemove = () => {
+  const handleRemove = () => {
     Alert.alert("Remove key?", "Are you sure you want to remove the stored key?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -119,7 +137,7 @@ const handleRemove = () => {
         },
       },
     ]);
-};
+  };
 
   const handlePromptSave = async () => {
     await SecureStore.setItemAsync(SYSTEM_PROMPT_STORAGE_KEY, prompt);
@@ -136,6 +154,7 @@ const handleRemove = () => {
             OpenAI API key
           </Text>
           <TextInput
+            ref={apiKeyRef}
             mode="outlined"
             secureTextEntry
             placeholder="sk-..."
@@ -145,6 +164,9 @@ const handleRemove = () => {
               if (error) setError("");
             }}
             style={{ marginBottom: 8 }}
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+            blurOnSubmit
           />
           {error ? (
             <Text style={{ color: theme.colors.error, marginBottom: 8 }}>
@@ -176,52 +198,76 @@ const handleRemove = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
-      <Stack.Screen options={{ title: 'Settings' }} />
-      <ManageButtons />
-      <Divider style={{ marginVertical: 16 }} />
-      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
-        System prompt
-      </Text>
-      <TextInput
-        mode="outlined"
-        multiline
-        value={prompt}
-        onChangeText={setPrompt}
-        style={{ marginBottom: 8 }}
-      />
-      <Button mode="outlined" onPress={() => Keyboard.dismiss()} style={{ marginBottom: 8 }}>
-        Dismiss keyboard
-      </Button>
-      <Divider style={{ marginVertical: 16 }} />
-      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
-        Learn mode prompt
-      </Text>
-      <TextInput
-        mode="outlined"
-        multiline
-        value={learnPrompt}
-        onChangeText={setLearnPrompt}
-        style={{ marginBottom: 8 }}
-      />
-      <Divider style={{ marginVertical: 16 }} />
-      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
-        Default shared percentage
-      </Text>
-      <TextInput
-        mode="outlined"
-        keyboardType="numeric"
-        value={String(sharedPercent)}
-        onChangeText={(t) => setSharedPercent(Number(t) || 0)}
-        style={{ marginBottom: 4 }}
-      />
-      <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>
-        This will be the default shared value for all entries created.
-      </Text>
-      <Button mode="outlined" onPress={handlePromptSave}>Save settings</Button>
-      <Divider style={{ marginVertical: 16 }} />
-      {renderKeySection()}
-    </ScrollView>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            padding: 20,
+            paddingBottom: insets.bottom,
+          }}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+        >
+          <Stack.Screen options={{ title: 'Settings' }} />
+          <ManageButtons />
+          <Divider style={{ marginVertical: 16 }} />
+          <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+            System prompt
+          </Text>
+          <TextInput
+            ref={promptRef}
+            mode="outlined"
+            multiline
+            value={prompt}
+            onChangeText={setPrompt}
+            style={{ marginBottom: 8 }}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => learnPromptRef.current?.focus()}
+          />
+          <Divider style={{ marginVertical: 16 }} />
+          <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+            Learn mode prompt
+          </Text>
+          <TextInput
+            ref={learnPromptRef}
+            mode="outlined"
+            multiline
+            value={learnPrompt}
+            onChangeText={setLearnPrompt}
+            style={{ marginBottom: 8 }}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => sharedPercentRef.current?.focus()}
+          />
+          <Divider style={{ marginVertical: 16 }} />
+          <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+            Default shared percentage
+          </Text>
+          <TextInput
+            ref={sharedPercentRef}
+            mode="outlined"
+            keyboardType="numeric"
+            value={String(sharedPercent)}
+            onChangeText={(t) => setSharedPercent(Number(t) || 0)}
+            style={{ marginBottom: 4 }}
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+            blurOnSubmit
+          />
+          <Text style={{ fontSize: 12, color: 'gray', marginBottom: 8 }}>
+            This will be the default shared value for all entries created.
+          </Text>
+          <Button mode="outlined" onPress={handlePromptSave}>Save settings</Button>
+          <Divider style={{ marginVertical: 16 }} />
+          {renderKeySection()}
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
