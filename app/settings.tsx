@@ -176,6 +176,7 @@ export default function Settings() {
           <Button mode="outlined" onPress={handleSave}>
             {hasKey ? 'Save new key' : 'Save key'}
           </Button>
+          <View style={{ height: 200 }} />
         </View>
       );
     }
