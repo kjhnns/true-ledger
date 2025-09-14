@@ -1,8 +1,20 @@
-import { useCallback, useState } from 'react';
-import { Alert, FlatList, Modal, TouchableOpacity, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Modal,
+  TouchableOpacity,
+  View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableWithoutFeedback,
+} from 'react-native';
 import { Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ExpenseCategory,
   ExpenseCategoryInput,
@@ -59,6 +71,9 @@ export default function ExpenseCategoriesPage() {
   const [error, setError] = useState('');
   const [parentVisible, setParentVisible] = useState(false);
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const labelRef = useRef<any>(null);
+  const promptRef = useRef<any>(null);
 
   const load = useCallback(async () => {
     const data = await listExpenseCategories();
@@ -160,94 +175,122 @@ export default function ExpenseCategoriesPage() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      <Stack.Screen options={{ title: 'Expense categories' }} />
-      <View style={{ padding: 16, borderBottomWidth: 1 }}>
-        <Text style={{ marginBottom: 4 }}>Label</Text>
-        <TextInput
-          mode="outlined"
-          value={label}
-          onChangeText={setLabel}
-          style={{ marginBottom: 12 }}
-        />
-        <Text style={{ marginBottom: 4 }}>Prompt</Text>
-        <TextInput
-          mode="outlined"
-          value={prompt}
-          onChangeText={setPrompt}
-          multiline
-          style={{ marginBottom: 12, height: 80 }}
-        />
-        <Text style={{ marginBottom: 4 }}>Parent</Text>
-        <TouchableOpacity
-          onPress={() => setParentVisible(true)}
-          style={{
-            borderWidth: 1,
-            padding: 8,
-            marginBottom: 12,
-            borderRadius: 4,
-          }}
-        >
-          <Text>{selectedParent ? selectedParent.label : 'None'}</Text>
-        </TouchableOpacity>
-        {error ? (
-          <Text style={{ color: theme.colors.error, marginBottom: 12 }}>{error}</Text>
-        ) : null}
-        <Button mode="outlined" onPress={handleSubmit}>
-          {editingId ? 'Update Category' : 'Add Category'}
-        </Button>
-        {editingId ? (
-          <View style={{ marginTop: 8 }}>
-            <Button mode="outlined" onPress={resetForm}>Cancel</Button>
-          </View>
-        ) : null}
-      </View>
-      <FlatList
-        data={tree}
-        keyExtractor={(i) => i.item.id}
-        renderItem={renderItem}
-      />
-      <Modal visible={parentVisible} transparent animationType="fade">
-        <View
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
-        >
-          <View
-            style={{ backgroundColor: 'white', margin: 32, padding: 16, maxHeight: '80%' }}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={{ flex: 1 }}>
+          <Stack.Screen options={{ title: 'Expense categories' }} />
+          <ScrollView
+            style={{ borderBottomWidth: 1 }}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              padding: 16,
+              paddingBottom: insets.bottom + 16,
+            }}
           >
-            <FlatList
-              data={[{ item: null, depth: 0 }, ...parentOptions]}
-              keyExtractor={(i, idx) => (i.item ? i.item.id : 'none') + idx}
-              renderItem={({ item }) =>
-                item.item ? (
-                  <TouchableOpacity
-                    style={{ padding: 8, paddingLeft: item.depth * 16 }}
-                    onPress={() => {
-                      setParentId(item.item!.id);
-                      setParentVisible(false);
-                    }}
-                  >
-                    <Text>{item.item.label}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={{ padding: 8 }}
-                    onPress={() => {
-                      setParentId(null);
-                      setParentVisible(false);
-                    }}
-                  >
-                    <Text>None</Text>
-                  </TouchableOpacity>
-                )
-              }
+            <Text style={{ marginBottom: 4 }}>Label</Text>
+            <TextInput
+              mode="outlined"
+              value={label}
+              onChangeText={setLabel}
+              style={{ marginBottom: 12 }}
+              ref={labelRef}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => promptRef.current?.focus()}
             />
-            <Button mode="outlined" onPress={() => setParentVisible(false)}>
-              Close
+            <Text style={{ marginBottom: 4 }}>Prompt</Text>
+            <TextInput
+              mode="outlined"
+              value={prompt}
+              onChangeText={setPrompt}
+              multiline
+              style={{ marginBottom: 12, height: 80 }}
+              ref={promptRef}
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={Keyboard.dismiss}
+            />
+            <Text style={{ marginBottom: 4 }}>Parent</Text>
+            <TouchableOpacity
+              onPress={() => setParentVisible(true)}
+              style={{
+                borderWidth: 1,
+                padding: 8,
+                marginBottom: 12,
+                borderRadius: 4,
+              }}
+            >
+              <Text>{selectedParent ? selectedParent.label : 'None'}</Text>
+            </TouchableOpacity>
+            {error ? (
+              <Text style={{ color: theme.colors.error, marginBottom: 12 }}>
+                {error}
+              </Text>
+            ) : null}
+            <Button mode="outlined" onPress={handleSubmit}>
+              {editingId ? 'Update Category' : 'Add Category'}
             </Button>
-          </View>
+            {editingId ? (
+              <View style={{ marginTop: 8 }}>
+                <Button mode="outlined" onPress={resetForm}>Cancel</Button>
+              </View>
+            ) : null}
+          </ScrollView>
+          <FlatList
+            data={tree}
+            keyExtractor={(i) => i.item.id}
+            renderItem={renderItem}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: insets.bottom }}
+          />
+          <Modal visible={parentVisible} transparent animationType="fade">
+            <View
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
+            >
+              <View
+                style={{ backgroundColor: 'white', margin: 32, padding: 16, maxHeight: '80%' }}
+              >
+                <FlatList
+                  data={[{ item: null, depth: 0 }, ...parentOptions]}
+                  keyExtractor={(i, idx) => (i.item ? i.item.id : 'none') + idx}
+                  renderItem={({ item }) =>
+                    item.item ? (
+                      <TouchableOpacity
+                        style={{ padding: 8, paddingLeft: item.depth * 16 }}
+                        onPress={() => {
+                          setParentId(item.item!.id);
+                          setParentVisible(false);
+                        }}
+                      >
+                        <Text>{item.item.label}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={{ padding: 8 }}
+                        onPress={() => {
+                          setParentId(null);
+                          setParentVisible(false);
+                        }}
+                      >
+                        <Text>None</Text>
+                      </TouchableOpacity>
+                    )
+                  }
+                />
+                <Button mode="outlined" onPress={() => setParentVisible(false)}>
+                  Close
+                </Button>
+              </View>
+            </View>
+          </Modal>
         </View>
-      </Modal>
-    </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
