@@ -1,17 +1,160 @@
 import * as SQLite from 'expo-sqlite';
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, DEFAULT_SAVINGS_CATEGORIES } from './defaultCategories';
 
-let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+const DEFAULT_DB_NAME = 'app_v3.db';
+const DB_PATH_STORAGE_KEY = 'db-file-path-v1';
 
-function ensureDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync('app_v3.db');
+type SecureStoreModule = {
+  getItemAsync(key: string): Promise<string | null>;
+  setItemAsync(key: string, value: string): Promise<void>;
+  deleteItemAsync?(key: string): Promise<void>;
+};
+
+export type DbFileInfo = {
+  path: string;
+  directory: string;
+  fileName: string;
+};
+
+let secureStorePromise: Promise<SecureStoreModule> | null = null;
+let cachedLocation: DbFileInfo | null = null;
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+let dbInstance: SQLite.SQLiteDatabase | null = null;
+
+function joinDirectoryAndFile(directory: string, fileName: string): string {
+  const trimmedDirectory = directory.replace(/\/+$/, '');
+  const trimmedFileName = fileName.replace(/^\/+/, '');
+  if (!trimmedDirectory) {
+    return trimmedFileName;
   }
-  return dbPromise!;
+  return `${trimmedDirectory}/${trimmedFileName}`;
+}
+
+function parseLocation(path: string): DbFileInfo {
+  const normalized = path.replace(/\\/g, '/');
+  const lastSlash = normalized.lastIndexOf('/');
+  if (lastSlash === -1) {
+    return {
+      path: normalized,
+      directory: '',
+      fileName: normalized || DEFAULT_DB_NAME,
+    };
+  }
+  const directory = normalized.slice(0, lastSlash);
+  const fileName = normalized.slice(lastSlash + 1) || DEFAULT_DB_NAME;
+  return { path: normalized, directory, fileName };
+}
+
+function getDefaultDirectory(): string {
+  return SQLite.defaultDatabaseDirectory ?? 'SQLite';
+}
+
+async function getSecureStore(): Promise<SecureStoreModule> {
+  if (!secureStorePromise) {
+    secureStorePromise = (async () => {
+      try {
+        const mod = await import('expo-secure-store');
+        if (
+          mod &&
+          typeof mod.getItemAsync === 'function' &&
+          typeof mod.setItemAsync === 'function'
+        ) {
+          return mod as SecureStoreModule;
+        }
+      } catch {
+        // ignore and fall back to in-memory store
+      }
+      const memory = new Map<string, string>();
+      return {
+        async getItemAsync(key: string) {
+          return memory.has(key) ? memory.get(key)! : null;
+        },
+        async setItemAsync(key: string, value: string) {
+          memory.set(key, value);
+        },
+        async deleteItemAsync(key: string) {
+          memory.delete(key);
+        },
+      };
+    })();
+  }
+  return secureStorePromise;
+}
+
+async function persistLocation(path: string): Promise<DbFileInfo> {
+  const secureStore = await getSecureStore();
+  await secureStore.setItemAsync(DB_PATH_STORAGE_KEY, path);
+  cachedLocation = parseLocation(path);
+  return cachedLocation;
+}
+
+async function ensureLocation(): Promise<DbFileInfo> {
+  if (cachedLocation) {
+    return cachedLocation;
+  }
+  const secureStore = await getSecureStore();
+  let storedPath = await secureStore.getItemAsync(DB_PATH_STORAGE_KEY);
+  if (!storedPath) {
+    const defaultPath = joinDirectoryAndFile(getDefaultDirectory(), DEFAULT_DB_NAME);
+    await secureStore.setItemAsync(DB_PATH_STORAGE_KEY, defaultPath);
+    storedPath = defaultPath;
+  } else if (!storedPath.includes('/')) {
+    const normalized = joinDirectoryAndFile(getDefaultDirectory(), storedPath);
+    await secureStore.setItemAsync(DB_PATH_STORAGE_KEY, normalized);
+    storedPath = normalized;
+  }
+  cachedLocation = parseLocation(storedPath);
+  return cachedLocation;
+}
+
+async function closeDbInstance() {
+  const db = dbInstance;
+  dbInstance = null;
+  dbPromise = null;
+  if (db && typeof db.closeAsync === 'function') {
+    try {
+      await db.closeAsync();
+    } catch {
+      // ignore close errors
+    }
+  }
+}
+
+async function ensureDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const location = await ensureLocation();
+      const directory = location.directory.trim() ? location.directory : undefined;
+      const db = await SQLite.openDatabaseAsync(location.fileName, undefined, directory);
+      dbInstance = db;
+      return db;
+    })();
+  }
+  return dbPromise;
 }
 
 export async function getDb() {
   return ensureDb();
+}
+
+export async function getDbFileInfo(): Promise<DbFileInfo> {
+  const info = await ensureLocation();
+  return { ...info };
+}
+
+export async function setDbFilePath(path: string): Promise<DbFileInfo> {
+  const normalizedPath = path.includes('/')
+    ? path
+    : joinDirectoryAndFile(getDefaultDirectory(), path);
+  await closeDbInstance();
+  return persistLocation(normalizedPath);
+}
+
+export async function deleteDbFile(): Promise<void> {
+  const location = await ensureLocation();
+  await closeDbInstance();
+  const directory = location.directory.trim() ? location.directory : undefined;
+  await SQLite.deleteDatabaseAsync(location.fileName, directory);
 }
 
 export async function initDb() {
