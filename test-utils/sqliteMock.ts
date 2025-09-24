@@ -5,16 +5,23 @@ const tables = {
 };
 
 let counters = { entities: 1, statements: 1, transactions: 1 };
+let closeCount = 0;
 
 function reset() {
   tables.entities.length = 0;
   tables.statements.length = 0;
   tables.transactions.length = 0;
   counters = { entities: 1, statements: 1, transactions: 1 };
+  closeCount = 0;
 }
 
 export const sqliteMock = {
   __reset: reset,
+  __getCloseCount: () => closeCount,
+  defaultDatabaseDirectory: 'file:///mock/SQLite',
+  async deleteDatabaseAsync() {
+    reset();
+  },
   openDatabaseAsync: async () => ({
     execAsync: async () => {},
     getAllAsync: async (sql: string, param?: any) => {
@@ -194,6 +201,9 @@ export const sqliteMock = {
           }
         }
       }
+    },
+    closeAsync: async () => {
+      closeCount += 1;
     },
   }),
 };

@@ -1,15 +1,42 @@
 import { Alert, ScrollView, View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import { Stack } from 'expo-router';
+import { deleteDbFile, getDbFileInfo, initDb, setDbFilePath } from '../lib/db';
 
-const DB_NAME = 'app_v3.db';
+function joinDirectoryAndFile(directory: string, fileName: string) {
+  const trimmedDirectory = directory.replace(/\/+$/, '');
+  const trimmedFileName = fileName.replace(/^\/+/, '');
+  return `${trimmedDirectory}/${trimmedFileName}`;
+}
+
+async function forceAppReload() {
+  try {
+    const Updates = await import('expo-updates');
+    if (Updates.reloadAsync) {
+      await Updates.reloadAsync();
+      return true;
+    }
+  } catch {
+    // ignore and fall back
+  }
+  try {
+    const { DevSettings } = await import('react-native');
+    if (DevSettings?.reload) {
+      DevSettings.reload();
+      return true;
+    }
+  } catch {
+    // ignore missing dev settings
+  }
+  return false;
+}
 
 export default function LocalDb() {
   const theme = useTheme();
 
   const getDbUri = async () => {
-    const FileSystem = await import('expo-file-system');
-    return `${FileSystem.documentDirectory}SQLite/${DB_NAME}`;
+    const info = await getDbFileInfo();
+    return info.path;
   };
 
   const handleExport = async () => {
@@ -35,15 +62,28 @@ export default function LocalDb() {
             try {
               const DocumentPicker = await import('expo-document-picker');
               const FileSystem = await import('expo-file-system');
-              const SQLite = await import('expo-sqlite');
+              const info = await getDbFileInfo();
               const { assets, canceled } = await DocumentPicker.getDocumentAsync({
                 copyToCacheDirectory: false,
               });
               if (canceled || !assets || assets.length === 0) return;
-              const dest = await getDbUri();
-              await SQLite.deleteDatabaseAsync(DB_NAME);
-              await FileSystem.copyAsync({ from: assets[0].uri, to: dest });
+              if (!info.directory) {
+                throw new Error('Database directory unavailable');
+              }
+              const destination = joinDirectoryAndFile(
+                info.directory,
+                `imported-${Date.now()}.db`
+              );
+              await FileSystem.copyAsync({ from: assets[0].uri, to: destination });
+              await setDbFilePath(destination);
               Alert.alert('Database imported.');
+              const reloaded = await forceAppReload();
+              if (!reloaded) {
+                Alert.alert(
+                  'Restart required',
+                  'Please restart the app manually to finish applying the imported database.'
+                );
+              }
             } catch {
               Alert.alert('Import failed.');
             }
@@ -64,9 +104,7 @@ export default function LocalDb() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const SQLite = await import('expo-sqlite');
-              const { initDb } = await import('../lib/db');
-              await SQLite.deleteDatabaseAsync(DB_NAME);
+              await deleteDbFile();
               await initDb();
               Alert.alert('Database reset.');
             } catch {
