@@ -124,11 +124,10 @@ The app supports local database file management:
 
 ## Babel Configuration
 
-IMPORTANT: `babel.config.js` must maintain exact plugin order:
-1. `expo-router/babel` (for file-based routing)
-2. `react-native-reanimated/plugin` (MUST be last)
+IMPORTANT: In SDK 50+, `babel-preset-expo` includes expo-router support. The only required plugin is:
+- `react-native-reanimated/plugin` (MUST be last in plugins array)
 
-Violating this order causes bundling failures. If you encounter Babel errors, verify this order and clear Metro cache with `npx expo start -c`.
+If you encounter Babel errors, clear Metro cache with `npx expo start -c`.
 
 ## Platform-Specific Notes
 
