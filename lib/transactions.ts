@@ -37,7 +37,24 @@ export const transactionSchema = z.object({
 
 export type TransactionInput = z.infer<typeof transactionSchema>;
 
-function mapRow(row: any): Transaction {
+interface TransactionRow {
+  id: number;
+  statement_id: number;
+  recipient_id: number | null;
+  sender_id: number | null;
+  created_at: number;
+  processed_at: number | null;
+  archived_at: number | null;
+  location: string | null;
+  description: string | null;
+  amount: number;
+  currency: string;
+  reviewed_at: number | null;
+  shared: number;
+  shared_amount: number | null;
+}
+
+function mapRow(row: TransactionRow): Transaction {
   return {
     id: String(row.id),
     statementId: String(row.statement_id),
@@ -77,9 +94,10 @@ export async function createTransaction(
     parsed.shared ? 1 : 0,
     parsed.sharedAmount ?? null
   );
-  const row = await db.getFirstAsync<any>(
+  const row = await db.getFirstAsync<TransactionRow>(
     'SELECT * FROM transactions WHERE rowid = last_insert_rowid()'
   );
+  if (!row) throw new Error('Failed to create transaction');
   return mapRow(row);
 }
 
@@ -98,7 +116,7 @@ export async function listTransactions(
   statementId: string
 ): Promise<Transaction[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<any>(
+  const rows = await db.getAllAsync<TransactionRow>(
     'SELECT * FROM transactions WHERE statement_id=? ORDER BY created_at DESC',
     statementId
   );
@@ -117,14 +135,14 @@ export async function updateTransaction(
   input: TransactionUpdateInput
 ): Promise<Transaction> {
   const db = await getDb();
-  const existing = await db.getFirstAsync<any>(
+  const existing = await db.getFirstAsync<TransactionRow>(
     'SELECT * FROM transactions WHERE id=?',
     id
   );
   if (!existing) throw new Error('Transaction not found');
 
   const updates: string[] = [];
-  const params: any[] = [];
+  const params: (string | number | null)[] = [];
   if (input.recipientId !== undefined) {
     updates.push('recipient_id=?');
     params.push(input.recipientId ?? null);
@@ -161,10 +179,11 @@ export async function updateTransaction(
     `UPDATE transactions SET ${updates.join(', ')} WHERE id=?`,
     ...params
   );
-  const row = await db.getFirstAsync<any>(
+  const row = await db.getFirstAsync<TransactionRow>(
     'SELECT * FROM transactions WHERE id=?',
     id
   );
+  if (!row) throw new Error('Transaction not found after update');
   if (input.reviewedAt !== undefined) {
     const remaining =
       (await db.getFirstAsync<{ count: number }>(

@@ -36,6 +36,7 @@ import {
   StatementMeta,
   unarchiveStatement,
 } from '../lib/statements';
+import { validatePdfFile } from '../lib/fileValidation';
 import Analysis from './analysis';
 import Settings from './settings';
 import UploadModal from './UploadModal';
@@ -194,7 +195,18 @@ export default function Index() {
   };
 
   const upload = async () => {
-    if (!selectedBank || !file) return;
+    if (!selectedBank || !file) {
+      showToast('Please select a bank and file');
+      return;
+    }
+
+    // Validate file before uploading
+    const validation = validatePdfFile(file);
+    if (!validation.valid) {
+      showToast(validation.error || 'Invalid file');
+      return;
+    }
+
     const stmt = await createStatement({
       bankId: selectedBank,
       uploadDate: Date.now(),

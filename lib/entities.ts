@@ -18,6 +18,17 @@ export interface Entity {
 export type BankAccount = Entity;
 export type ExpenseCategory = Entity;
 
+interface EntityRow {
+  id: number;
+  label: string;
+  category: string;
+  prompt: string;
+  parent_id: number | null;
+  currency: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export const entitySchema = z.object({
   label: z.string().min(1, 'Label is required'),
   category: z.enum(['bank', 'expense', 'income', 'savings']),
@@ -42,7 +53,7 @@ export const expenseCategorySchema = z.object({
 });
 export type ExpenseCategoryInput = z.infer<typeof expenseCategorySchema>;
 
-function mapRow(row: any): Entity {
+function mapRow(row: EntityRow): Entity {
   return {
     id: String(row.id),
     label: row.label,
@@ -57,7 +68,7 @@ function mapRow(row: any): Entity {
 
 export async function listEntities(category: EntityCategory): Promise<Entity[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<any>(
+  const rows = await db.getAllAsync<EntityRow>(
     'SELECT * FROM entities WHERE category=? ORDER BY created_at DESC',
     category
   );
@@ -66,7 +77,7 @@ export async function listEntities(category: EntityCategory): Promise<Entity[]> 
 
 export async function getEntity(id: string): Promise<Entity | null> {
   const db = await getDb();
-  const row = await db.getFirstAsync<any>(
+  const row = await db.getFirstAsync<EntityRow>(
     'SELECT * FROM entities WHERE id=?',
     id
   );
@@ -88,9 +99,10 @@ export async function createEntity(input: EntityInput): Promise<Entity> {
     now,
     now
   );
-  const row = await db.getFirstAsync<any>(
+  const row = await db.getFirstAsync<EntityRow>(
     'SELECT * FROM entities WHERE rowid = last_insert_rowid()'
   );
+  if (!row) throw new Error('Failed to create entity');
   return mapRow(row);
 }
 

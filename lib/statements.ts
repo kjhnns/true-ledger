@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getDb } from './db';
 import { getEntity, listExpenseCategories } from './entities';
 import { createTransaction } from './transactions';
+import { validatePdfFile, sanitizeFileName } from './fileValidation';
 
 export const STATEMENT_STATUSES = ['new', 'processed', 'reviewed', 'published', 'error'] as const;
 export type StatementStatus = (typeof STATEMENT_STATUSES)[number];
@@ -29,7 +30,20 @@ export const statementSchema = z.object({
 
 export type StatementInput = z.infer<typeof statementSchema>;
 
-function mapRow(row: any): Statement {
+interface StatementRow {
+  id: number;
+  bank_id: number;
+  upload_date: number;
+  file: string | null;
+  external_file_id: string | null;
+  status: string;
+  processed_at: number | null;
+  reviewed_at: number | null;
+  published_at: number | null;
+  archived_at: number | null;
+}
+
+function mapRow(row: StatementRow): Statement {
   return {
     id: String(row.id),
     bankId: String(row.bank_id),
@@ -54,24 +68,29 @@ export interface StatementMeta extends Statement {
 
 export async function createStatement(input: StatementInput): Promise<Statement> {
   const parsed = statementSchema.parse(input);
+
+  // Sanitize filename if present
+  const sanitizedFile = parsed.file ? sanitizeFileName(parsed.file) : null;
+
   const db = await getDb();
   await db.runAsync(
     'INSERT INTO statements (bank_id, upload_date, file, external_file_id, status) VALUES (?,?,?,?,?)',
     parsed.bankId,
     parsed.uploadDate,
-    parsed.file ?? null,
+    sanitizedFile,
     parsed.externalFileId ?? null,
     parsed.status
   );
-  const row = await db.getFirstAsync<any>(
+  const row = await db.getFirstAsync<StatementRow>(
     'SELECT * FROM statements WHERE rowid = last_insert_rowid()'
   );
+  if (!row) throw new Error('Failed to create statement');
   return mapRow(row);
 }
 
 export async function listStatementsWithMeta(): Promise<StatementMeta[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<any>(
+  const rows = await db.getAllAsync<StatementRow>(
     'SELECT * FROM statements ORDER BY upload_date DESC'
   );
   const result: StatementMeta[] = [];
@@ -107,7 +126,7 @@ export async function listStatementsWithMeta(): Promise<StatementMeta[]> {
 
 export async function getStatement(id: string): Promise<Statement | null> {
   const db = await getDb();
-  const row = await db.getFirstAsync<any>(
+  const row = await db.getFirstAsync<StatementRow>(
     'SELECT * FROM statements WHERE id=?',
     id
   );
@@ -152,9 +171,12 @@ export async function createDummyStatementWithTransactions(
   bankId: string,
   fileName: string
 ): Promise<Statement> {
-  if (!fileName.toLowerCase().endsWith('.pdf')) {
-    throw new Error('Only PDF files are allowed');
+  // Validate file
+  const validation = validatePdfFile({ name: fileName, uri: 'dummy://file' });
+  if (!validation.valid) {
+    throw new Error(validation.error);
   }
+
   const bank = await getEntity(bankId);
   if (!bank || bank.category !== 'bank') {
     throw new Error('Invalid bank');

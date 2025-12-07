@@ -12,7 +12,25 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.johannesklumpe.expensu",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "PDF Document",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": ["com.adobe.pdf"]
+          }
+        ],
+        "UTImportedTypeDeclarations": [
+          {
+            "UTTypeConformsTo": ["public.data", "public.content"],
+            "UTTypeDescription": "PDF Document",
+            "UTTypeIdentifier": "com.adobe.pdf",
+            "UTTypeTagSpecification": {
+              "public.filename-extension": ["pdf"],
+              "public.mime-type": ["application/pdf"]
+            }
+          }
+        ]
       }
     },
     "android": {

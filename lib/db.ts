@@ -171,6 +171,7 @@ export async function initDb() {
       updated_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_entities_label ON entities(label);
+    CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
     CREATE TABLE IF NOT EXISTS statements(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bank_id INTEGER NOT NULL,
@@ -184,6 +185,7 @@ export async function initDb() {
       archived_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_statements_upload_date ON statements(upload_date);
+    CREATE INDEX IF NOT EXISTS idx_statements_bank_id ON statements(bank_id);
     CREATE TABLE IF NOT EXISTS transactions(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       statement_id INTEGER NOT NULL,
@@ -200,7 +202,13 @@ export async function initDb() {
       shared INTEGER NOT NULL DEFAULT 0,
       shared_amount REAL
     );
-    CREATE INDEX IF NOT EXISTS idx_transactions_statement ON transactions(statement_id);`
+    CREATE INDEX IF NOT EXISTS idx_transactions_statement ON transactions(statement_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_transactions_reviewed_at ON transactions(reviewed_at);
+    CREATE INDEX IF NOT EXISTS idx_transactions_sender_id ON transactions(sender_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_recipient_id ON transactions(recipient_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_shared ON transactions(shared);
+    CREATE INDEX IF NOT EXISTS idx_transactions_date_reviewed ON transactions(created_at, reviewed_at);`
   );
   await seedDefaultCategories(db);
 }
@@ -224,9 +232,10 @@ async function seedDefaultCategories(db: SQLite.SQLiteDatabase) {
         now,
         now
       );
-      const parent = await db.getFirstAsync<any>(
+      const parent = await db.getFirstAsync<{ id: number }>(
         'SELECT id FROM entities WHERE rowid = last_insert_rowid()'
       );
+      if (!parent) continue;
       const parentId = parent.id;
       for (const child of cat.children ?? []) {
         await db.runAsync(

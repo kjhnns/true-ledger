@@ -9,9 +9,13 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   SecureStore = require('expo-secure-store');
 } catch (e) {
+  // In-memory fallback for test environments only
+  // WARNING: This should NEVER be used in production
+  const memoryStore = new Map<string, string>();
   SecureStore = {
-    getItemAsync: async (key: string) => (process.env[key] as string) ?? null,
-    setItemAsync: async (key: string, value: string) => { process.env[key] = value; },
+    getItemAsync: async (key: string) => memoryStore.get(key) ?? null,
+    setItemAsync: async (key: string, value: string) => { memoryStore.set(key, value); },
+    deleteItemAsync: async (key: string) => { memoryStore.delete(key); },
   };
 }
 let OpenAI: any;

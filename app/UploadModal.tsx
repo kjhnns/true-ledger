@@ -1,14 +1,16 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Button, List, Modal, Portal, RadioButton, Text } from 'react-native-paper';
+import type * as DocumentPicker from 'expo-document-picker';
 import ProcessingModal from './ProcessingModal';
+import type { Entity } from '../lib/entities';
 
 export type UploadModalProps = {
   visible: boolean;
   modalScreen: 'form' | 'processing';
-  banks: any[];
+  banks: Entity[];
   selectedBank: string | null;
-  file: any | null;
+  file: DocumentPicker.DocumentPickerAsset | null;
   processingStmtId: string | null;
   processingLog: string;
   processingCompleted: boolean;
