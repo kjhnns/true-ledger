@@ -1,0 +1,121 @@
+name: Production Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_type:
+        description: 'Deployment Type'
+        required: true
+        type: choice
+        options:
+          - ota-update
+          - ios-build
+          - both
+        default: 'ota-update'
+      update_message:
+        description: 'Update message (for OTA updates)'
+        required: false
+        default: 'Production update'
+      submit_to_store:
+        description: 'Auto-submit iOS build to App Store (for ios-build)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  production-ota-update:
+    name: Push OTA Update to Production
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.deployment_type == 'ota-update' || github.event.inputs.deployment_type == 'both' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run expo-doctor
+        run: npx expo-doctor --fix --ci || true
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Push EAS Update to Production Channel
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_ENV: production
+        run: |
+          eas update \
+            --channel production \
+            --non-interactive \
+            --message "${{ github.event.inputs.update_message || 'Production update' }}"
+
+      - name: Update Summary
+        run: |
+          echo "### ✅ Production OTA Update Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Channel:** production" >> $GITHUB_STEP_SUMMARY
+          echo "**Message:** ${{ github.event.inputs.update_message || 'Production update' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  production-ios-build:
+    name: Build and Submit iOS to App Store
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.deployment_type == 'ios-build' || github.event.inputs.deployment_type == 'both' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run expo-doctor
+        run: npx expo-doctor --fix --ci || true
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build iOS Production
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_ENV: production
+        run: |
+          eas build \
+            --platform ios \
+            --profile production \
+            --non-interactive \
+            --no-wait
+
+      - name: Submit to App Store (if requested)
+        if: ${{ github.event.inputs.submit_to_store == 'true' }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          # Wait a moment for build to register
+          sleep 10
+          eas submit \
+            --platform ios \
+            --profile production \
+            --non-interactive \
+            --latest
+
+      - name: Build Summary
+        run: |
+          echo "### 🚀 iOS Production Build Started" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** iOS" >> $GITHUB_STEP_SUMMARY
+          echo "**Profile:** production" >> $GITHUB_STEP_SUMMARY
+          echo "**Auto-submit:** ${{ github.event.inputs.submit_to_store }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check build status at: https://expo.dev" >> $GITHUB_STEP_SUMMARY
