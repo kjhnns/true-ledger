@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Menu, Text, TextInput, useTheme } from 'react-native-paper';
-import { SUPPORTED_CURRENCIES } from '../../lib/currencies';
+import { Currency, SUPPORTED_CURRENCIES } from '../../lib/currencies';
 import { BankAccountInput, bankAccountSchema } from '../../lib/entities';
 
 export type Props = {
@@ -21,8 +21,8 @@ export type Props = {
 export default function BankAccountForm({ initial, onSubmit, submitLabel }: Props) {
   const [label, setLabel] = useState<string>(initial?.label ?? '');
   const [prompt, setPrompt] = useState<string>(initial?.prompt ?? '');
-  const [currency, setCurrency] = useState<string>(
-    initial?.currency ?? SUPPORTED_CURRENCIES[2]
+  const [currency, setCurrency] = useState<Currency>(
+    (initial?.currency as Currency) ?? SUPPORTED_CURRENCIES[2]
   );
   const [error, setError] = useState<string>('');
   const [menuVisible, setMenuVisible] = useState(false);
@@ -32,10 +32,10 @@ export default function BankAccountForm({ initial, onSubmit, submitLabel }: Prop
   const promptRef = useRef<any>(null);
 
   const handleSave = async () => {
-    const input: BankAccountInput = {
+    const input = {
       label: label.trim(),
       prompt: prompt.trim() || undefined,
-      currency: currency as any,
+      currency: currency,
     };
     const result = bankAccountSchema.safeParse(input);
     if (!result.success) {
