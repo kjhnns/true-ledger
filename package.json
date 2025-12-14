@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "deploy": "eas update --channel staging --message \"Staging Update\"",
+    "deploy:production": "eas update --channel production --message \"Production Update\"",
+    "deploy:dev": "eas update --channel development --message \"Development Update\"",
     "start": "expo start -c",
     "start:tunnel": "expo start -c --tunnel",
     "reset-project": "node ./scripts/reset-project.js",

@@ -16,7 +16,10 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "node": "22.11.0"
+      "node": "22.11.0",
+      "env": {
+        "NO_FLIPPER": "1"
+      }
     }
   },
   "submit": {
