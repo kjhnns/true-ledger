@@ -24,7 +24,8 @@ export const sqliteMock = {
   },
   openDatabaseAsync: async () => ({
     execAsync: async () => {},
-    getAllAsync: async (sql: string, param?: any) => {
+    getAllAsync: async (sql: string, ...params: any[]) => {
+      const param = params[0];
       if (sql.startsWith('SELECT * FROM entities')) {
         return tables.entities.filter((r) => r.category === param);
       }
@@ -36,6 +37,54 @@ export const sqliteMock = {
           .filter((t) => t.statement_id === param)
           .sort((a, b) => b.created_at - a.created_at);
       }
+      // Handle summarizeReviewedTransactionsByBank JOIN query (must be before general transactions query)
+      if (sql.includes('FROM transactions t') && sql.includes('JOIN statements s') && sql.includes('JOIN entities e')) {
+        const [start, end] = params;
+        const result: any[] = [];
+        const bankTotals = new Map<string, { bank_id: string; bank_label: string; count: number; total: number }>();
+
+        for (const t of tables.transactions) {
+          if (t.created_at < start || t.created_at > end || t.reviewed_at == null) continue;
+          const stmt = tables.statements.find((s) => s.id === t.statement_id);
+          if (!stmt) continue;
+          const bank = tables.entities.find((e) => e.id === stmt.bank_id);
+          if (!bank) continue;
+
+          const existing = bankTotals.get(stmt.bank_id) || {
+            bank_id: stmt.bank_id,
+            bank_label: bank.label,
+            count: 0,
+            total: 0
+          };
+          existing.count += 1;
+          existing.total += t.amount;
+          bankTotals.set(stmt.bank_id, existing);
+        }
+
+        return Array.from(bankTotals.values()).sort((a, b) => a.bank_label.localeCompare(b.bank_label));
+      }
+      // Handle shared transactions query for sumSplitCredit
+      if (sql.includes('FROM transactions') && sql.includes('shared = 1') && sql.includes('reviewed_at IS NOT NULL')) {
+        const [start, end] = params;
+        return tables.transactions
+          .filter((t) =>
+            t.created_at >= start &&
+            t.created_at <= end &&
+            t.reviewed_at != null &&
+            t.shared === 1
+          );
+      }
+      // Handle analytics queries with date range and reviewed_at filter
+      if (sql.includes('FROM transactions') && sql.includes('created_at >=') && sql.includes('reviewed_at IS NOT NULL')) {
+        const [start, end] = params;
+        return tables.transactions
+          .filter((t) =>
+            t.created_at >= start &&
+            t.created_at <= end &&
+            t.reviewed_at != null
+          )
+          .sort((a, b) => a.created_at - b.created_at);
+      }
       if (sql.startsWith('SELECT * FROM transactions')) {
         return [...tables.transactions].sort(
           (a, b) => b.created_at - a.created_at
@@ -43,11 +92,27 @@ export const sqliteMock = {
       }
       return [];
     },
-    getFirstAsync: async (sql: string, param?: any) => {
+    getFirstAsync: async (sql: string, ...params: any[]) => {
+      const param = params[0];
       if (sql.startsWith('SELECT COUNT(*) as count FROM entities')) {
         return {
           count: tables.entities.filter((r) => r.category === param).length,
         };
+      }
+      // Handle sumByIds and sumSavings queries
+      if (sql.includes('SELECT COALESCE(SUM(amount), 0) as total') && sql.includes('FROM transactions')) {
+        const [start, end, ...ids] = params;
+        const isSenderQuery = sql.includes('sender_id IN');
+        const isRecipientQuery = sql.includes('recipient_id IN');
+        const filtered = tables.transactions.filter((t) => {
+          if (t.created_at < start || t.created_at > end) return false;
+          if (t.reviewed_at == null) return false;
+          if (isSenderQuery && !ids.includes(t.sender_id)) return false;
+          if (isRecipientQuery && !ids.includes(t.recipient_id)) return false;
+          return true;
+        });
+        const total = filtered.reduce((sum, t) => sum + t.amount, 0);
+        return { total };
       }
       if (sql.startsWith('SELECT COUNT(*) as count FROM transactions')) {
         if (sql.includes('reviewed_at IS NULL')) {

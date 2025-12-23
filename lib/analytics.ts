@@ -211,15 +211,16 @@ export async function summarizeReviewedTransactionsByBank(
 
   // Update with actual data
   rows.forEach((r) => {
+    const existing = summary.get(String(r.bank_id));
     summary.set(String(r.bank_id), {
       bankId: String(r.bank_id),
-      bankLabel: r.bank_label,
+      bankLabel: r.bank_label || existing?.bankLabel || '',
       count: r.count,
       total: r.total,
     });
   });
 
-  return Array.from(summary.values()).sort((a, b) => a.bankLabel.localeCompare(b.bankLabel));
+  return Array.from(summary.values()).sort((a, b) => (a.bankLabel || '').localeCompare(b.bankLabel || ''));
 }
 
 function toCamel(parts: string[]): string {

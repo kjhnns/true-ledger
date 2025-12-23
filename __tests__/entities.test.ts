@@ -36,6 +36,14 @@ test('seeds default income and savings categories', async () => {
   expect(savings.find((c) => c.label === 'General')).toBeTruthy();
 });
 
+test('seeds default bank account', async () => {
+  const banks = await listBankAccounts();
+  const mainBank = banks.find((b) => b.label === 'Main');
+  expect(mainBank).toBeTruthy();
+  expect(mainBank?.category).toBe('bank');
+  expect(mainBank?.currency).toBe('USD');
+});
+
 test('create, update, delete bank account', async () => {
   const created = await createBankAccount({
     label: 'Checking',
@@ -55,7 +63,9 @@ test('create, update, delete bank account', async () => {
   expect(updated?.currency).toBe('EUR');
   await deleteBankAccount(created.id);
   const list = await listBankAccounts();
-  expect(list.length).toBe(0);
+  // Default "Main" bank account is seeded on initDb, so expect 1 remaining
+  expect(list.length).toBe(1);
+  expect(list[0].label).toBe('Main');
 });
 
 test('create bank account without prompt', async () => {
