@@ -289,4 +289,22 @@ async function seedDefaultCategories(db: SQLite.SQLiteDatabase) {
       );
     }
   }
+
+  // Seed default bank account
+  const bankExisting = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM entities WHERE category=?',
+    'bank'
+  );
+  if (!bankExisting || bankExisting.count === 0) {
+    await db.runAsync(
+      'INSERT INTO entities (label, category, prompt, parent_id, currency, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
+      'Main',
+      'bank',
+      '',
+      null,
+      'USD',
+      now,
+      now
+    );
+  }
 }

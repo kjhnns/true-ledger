@@ -4,12 +4,14 @@ import { createStatement } from '../lib/statements';
 import { createExpenseCategory, createEntity } from '../lib/entities';
 import { createTransaction } from '../lib/transactions';
 import { exportReviewedTransactionsToCsv } from '../lib/analytics';
+import { initDb } from '../lib/db';
 import sqliteMock from '../test-utils/sqliteMock';
 
 describe('exportReviewedTransactionsToCsv', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // @ts-ignore
     sqliteMock.__reset();
+    await initDb();
   });
 
   it('exports reviewed transactions with entity keys', async () => {

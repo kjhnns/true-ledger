@@ -4,12 +4,14 @@ import { createStatement } from '../lib/statements';
 import { createExpenseCategory, createEntity } from '../lib/entities';
 import { createTransaction } from '../lib/transactions';
 import { summarizeExpensesByParent, computeKeyMetrics, summarizeReviewedTransactionsByBank } from '../lib/analytics';
+import { initDb } from '../lib/db';
 import sqliteMock from '../test-utils/sqliteMock';
 
 describe('analytics', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // @ts-ignore
     sqliteMock.__reset();
+    await initDb();
   });
 
   it('summarizes expenses by top-level parent', async () => {
@@ -323,9 +325,10 @@ describe('analytics', () => {
     });
 
     const res = await summarizeReviewedTransactionsByBank(now - 2000, now);
-    expect(res).toEqual([
-      { bankId: bank1.id, bankLabel: 'Bank1', count: 1, total: 100 },
-      { bankId: bank2.id, bankLabel: 'Bank2', count: 0, total: 0 },
-    ]);
+    // Find the results for Bank1 and Bank2 (Main is also seeded by initDb)
+    const bank1Result = res.find((r) => r.bankLabel === 'Bank1');
+    const bank2Result = res.find((r) => r.bankLabel === 'Bank2');
+    expect(bank1Result).toEqual({ bankId: bank1.id, bankLabel: 'Bank1', count: 1, total: 100 });
+    expect(bank2Result).toEqual({ bankId: bank2.id, bankLabel: 'Bank2', count: 0, total: 0 });
   });
 });
